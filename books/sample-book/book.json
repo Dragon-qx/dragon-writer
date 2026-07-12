@@ -1,0 +1,11 @@
+{
+  "id": "sample-book",
+  "title": "霜寒之纪",
+  "language": "zh",
+  "genre": "仙侠",
+  "status": "drafting",
+  "targetChapters": 200,
+  "chapterWordCount": 3000,
+  "createdAt": "2026-03-12",
+  "updatedAt": "2026-07-10"
+}
