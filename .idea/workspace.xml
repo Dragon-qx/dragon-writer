@@ -4,12 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="58e3aec4-34c3-4a26-855e-308e09cc9a7b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/dragon-writer/SKILL.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/agents/openai.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/file-contract.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/templates.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/workflow.md" afterDir="false" />
+    <list default="true" id="58e3aec4-34c3-4a26-855e-308e09cc9a7b" name="Changes" comment="feat：v1">
+      <change beforePath="$PROJECT_DIR$/dragon-writer/references/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/references/dashboard.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,8 +57,17 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1783801760997</updated>
-      <workItem from="1783801762059" duration="12952000" />
+      <workItem from="1783801762059" duration="15815000" />
     </task>
+    <task id="LOCAL-00001" summary="feat：v1">
+      <option name="closed" value="true" />
+      <created>1783879397808</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1783879397808</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -78,5 +83,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="feat：v1" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat：v1" />
   </component>
 </project>
