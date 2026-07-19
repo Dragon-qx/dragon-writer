@@ -325,6 +325,8 @@ async function loadBook(handle, entries) {
     await render();
   } catch (err) {
     console.error(err);
+    // 启动时的静默自动重连失败：不弹提示，停留落地页等待用户手动选
+    if (autoResumed) return;
     // 永远展示中文友好提示，不泄露浏览器原生的外文异常文本
     const friendly =
       err && err.message && !err.message.includes("could not be found") && !err.message.includes("be found at the time")
@@ -595,22 +597,34 @@ applyTheme((localStorage.getItem("dw-theme")||"auto"));
 
 /* ---------- 入口绑定 ---------- */
 let lastHandle = null;
+let autoResumed = false;
 async function pickFolder() {
   if (window.showDirectoryPicker) {
     try {
       const handle = await window.showDirectoryPicker({ mode: "read", id: "dragon-writer-book" });
       $("resumeName").textContent = handle.name;
+      autoResumed = false;
       await loadBook(handle, null);
     } catch (e) { if (e && e.name === "AbortError") return; /* loadBook 已弹提示 */ }
   } else { $("fileInput").click(); }
 }
 $("pickBtn").onclick = pickFolder;
 $("compatBtn").onclick = () => $("fileInput").click();
-$("refreshBtn").onclick = () => { if (lastHandle) loadBook(lastHandle, null); else pickFolder(); };
+$("refreshBtn").onclick = () => { if (lastHandle) { autoResumed = false; loadBook(lastHandle, null); } else pickFolder(); };
 $("rePickBtn").onclick = () => { document.body.classList.remove("loaded"); data = null; pickFolder(); };
-$("fileInput").onchange = (e) => { if (e.target.files.length) loadBook(null, Array.from(e.target.files)); };
+$("fileInput").onchange = (e) => { if (e.target.files.length) { autoResumed = false; loadBook(null, Array.from(e.target.files)); } };
 const _origLoad = loadBook;
 loadBook = async (handle, entries) => { lastHandle = handle; $("refreshBtn").style.display = "inline-block"; await _origLoad(handle, entries); };
+async function tryResumeSilent(h) {
+  try {
+    let perm = await h.queryPermission({ mode: "read" });
+    if (perm !== "granted") perm = await h.requestPermission({ mode: "read" });
+    if (perm !== "granted") return false;
+    autoResumed = true;
+    await loadBook(h, null);
+    return true;
+  } catch (err) { console.warn("自动恢复书架失败", err); return false; }
+}
 
 /* ---------- 导出全本 TXT ---------- */
 $("exportBtn").onclick = () => {
@@ -634,19 +648,18 @@ $("exportBtn").onclick = () => {
   URL.revokeObjectURL(url);
 };
 
-/* ---------- 启动：尝试恢复上次文件夹，否则显示落地页 ---------- */
+/* ---------- 启动：自动静默重连上次书架，失败则停留落地页；用户也可手动选 ---------- */
 (async () => {
   if (!window.showDirectoryPicker) return;
   try {
     const h = await IDB.load("last");
-    if (h) {
-      $("resumeHint").style.display = "block";
-      $("resumeName").textContent = h.name;
-      $("resumeLink").onclick = async (e) => { e.preventDefault();
-        try { let perm = await h.queryPermission({ mode: "read" }); if (perm !== "granted") { perm = await h.requestPermission({ mode: "read" }); if (perm !== "granted") return; } await loadBook(h, null); }
-        catch (err) { console.warn("恢复需要 File System Access API", err); } };
-    }
-  } catch (e) { /* 首次访问：停留落地页 */ }
+    if (!h) return;
+    $("resumeHint").style.display = "block";
+    $("resumeName").textContent = h.name;
+    $("resumeLink").onclick = (e) => { e.preventDefault(); tryResumeSilent(h); };
+    // 自动尝试静默重连：成功则直接进入仪表盘，失败就留落地页（不弹提示）
+    await tryResumeSilent(h);
+  } catch (e) { /* 首次访问 / 无句柄：停留落地页 */ }
 })();
 </script>
 </body>
