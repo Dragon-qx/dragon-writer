@@ -28,15 +28,29 @@ Dragon Writer 把一本长篇小说拆成一份可审计、可回滚、可跨会
 
 ### 写作仪表盘（双击即用）
 
-`dashboard.html` 是一份**运行时模板**，不嵌入任何数据。打开后通过 File System Access API 选择书文件夹（首次授权后 IndexedDB 持久化，后续零交互），运行时读源文件实时计算：
+`dashboard.html` 是一份**运行时模板**，不嵌入任何数据。打开后通过 File System Access API 选择书文件夹（首次授权后 IndexedDB 持久化，后续零交互），运行时读源文件实时计算。共 5 个标签页：
 
-- 写作进度（进度环、字数、完成度）
-- 设定完成度（故事框架 / 卷纲 / 规则书 / 当前状态，逐维进度条）
-- **设定内容全文**（新增独立标签：4 份设定文件可展开阅读）
-- 人物关系图（`<canvas>` 力导向图，可拖拽点击 + 角色卡）
-- 章节阅读（目录 + Markdown 渲染 + 上一章 / 下一章导航）
-- 章节合并导出 TXT（按章节顺序一键拼成单一 `.txt` 文件并下载）
-- 审计漂移（已修复 / 已知漂移两节）
+**① 总览** —— 进度环 + 6 张统计卡 + 当前状态 + 最近章节表 + 审计漂移。
+
+![总览](dragon-writer/references/tab-overview.png)
+
+**② 设定完成度** —— 4 份设定文件的逐域进度条，点开即见子项完成状态。
+
+![设定完成度](dragon-writer/references/tab-settings.png)
+
+**③ 设定内容** —— 4 份设定文件原文 Markdown 全文渲染，可展开 / 折叠。
+
+![设定内容](dragon-writer/references/tab-settings-content.png)
+
+**④ 人物关系** —— 力导向关系图（可拖拽节点、点击高亮）+ 右侧角色详情信息板 + 角色卡网格。
+
+![人物关系](dragon-writer/references/tab-chars.png)
+
+**⑤ 阅读章节** —— 左栏目录 + 右栏 Serif 字体 Markdown 渲染，上一章 / 下一章导航 + 一键导出全本 TXT。
+
+![阅读章节](dragon-writer/references/tab-read.png)
+
+上图示例：《霜寒之纪》——4/200 章、约 1265 字、4 份设定文件、7 位角色（4 主 3 次）、章节摘要与审计漂移一览。
 
 ### 受保护上下文 vs 可压缩历史
 

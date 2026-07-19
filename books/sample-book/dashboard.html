@@ -26,7 +26,21 @@
   .progress-wrap{margin:4px 0 20px}.progress-bar{height:8px;background:var(--track);border-radius:999px;overflow:hidden}.progress-bar>span{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .5s ease}.progress-head{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px}.progress-head .pct{color:var(--accent);font-weight:600}
   .ringwrap{display:flex;align-items:center;gap:28px;flex-wrap:wrap}.ring{--p:0;width:130px;height:130px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p) * 1%),var(--track) 0);display:grid;place-items:center;position:relative}.ring::before{content:"";position:absolute;inset:11px;background:var(--bg-elevated);border-radius:50%}.ring .num{position:relative;font-family:var(--serif);font-size:26px;font-weight:600;z-index:1}.ring .num .pct-sym{font-size:13px;color:var(--text-muted);font-weight:400}.ringcaption{font-size:13px;color:var(--text-muted)}.ringcaption strong{color:var(--text);font-size:15px}
   .domain{margin-bottom:18px}.domain>.row{display:flex;align-items:center;gap:10px;cursor:pointer}.domain>.row .name{font-weight:600}.domain>.row .pct{margin-left:auto;font-size:13px;color:var(--text-muted)}.domain ul{list-style:none;margin:10px 0 0;padding:0 0 0 6px;display:none}.domain.open ul{display:block}.domain li{font-size:13px;color:var(--text-muted);padding:2px 0}.domain li.ok{color:var(--success)}.domain li::before{content:"○ "}.domain li.ok::before{content:"● "}.chev{transition:transform .15s;color:var(--text-muted);font-size:11px}.domain.open .chev{transform:rotate(90deg)}
-  #graph{width:100%;height:440px;background:var(--bg-subtle);border-radius:var(--radius);border:1px solid var(--border);display:block;touch-action:none}.char-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}.charcard{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:border-color .15s}.charcard:hover{border-color:var(--accent)}.charcard .name{font-family:var(--serif);font-size:16px;font-weight:600}.charcard .tier{font-size:11px;color:var(--accent);margin-bottom:6px}.charcard .kv{font-size:12px;color:var(--text-muted)}.charcard .kv b{color:var(--text);font-weight:500}
+  .char-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}.charcard{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:border-color .15s}.charcard:hover{border-color:var(--accent)}.charcard .name{font-family:var(--serif);font-size:16px;font-weight:600}.charcard .tier{font-size:11px;color:var(--accent);margin-bottom:6px}.charcard .kv{font-size:12px;color:var(--text-muted);line-height:1.7}.charcard .kv b{color:var(--text);font-weight:600;display:inline-block;width:1.4em;text-align:center;margin-right:6px}
+.graphwrap{display:flex;gap:16px;align-items:stretch;min-height:440px}
+.graphwrap .gfx{position:relative;flex:1 1 auto;min-width:0}
+#graph{width:100%;height:440px;background:var(--bg-subtle);border-radius:var(--radius);border:1px solid var(--border);display:block;touch-action:none}
+.graphwrap .info{flex:0 0 300px;max-width:300px;background:var(--bg-subtle);border-radius:var(--radius);border:1px solid var(--border);border-left:3px solid var(--accent);padding:16px 18px;overflow:auto;align-self:start;max-height:440px;position:sticky;top:70px}
+.graphwrap .info .name{font-family:var(--serif);font-size:20px;font-weight:600;margin:2px 0 8px}
+.graphwrap .info .tier{font-size:11px;color:var(--accent);background:var(--accent-soft);display:inline-block;padding:2px 10px;border-radius:999px;margin-bottom:12px}
+.graphwrap .info dl{margin:0}
+.graphwrap .info dt{font-size:12px;font-weight:600;color:var(--text);margin:12px 0 4px;scroll-margin-top:70px}
+.graphwrap .info dt:first-child{margin-top:0}
+.graphwrap .info dd{margin:0;font-size:13px;color:var(--text-muted);line-height:1.7}
+.graphwrap .info .rels{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}
+.graphwrap .info .rels .rname{color:var(--accent);font-weight:600}
+.graphwrap .info .empty{color:var(--text-muted);font-size:13px;line-height:1.7}
+@media(max-width:820px){.graphwrap{flex-direction:column}.graphwrap .info{flex:0 0 auto;max-width:none;max-height:none;position:static}}
   .reader{display:grid;grid-template-columns:240px 1fr;gap:20px;min-height:60vh}.toc{border-right:1px solid var(--border);position:sticky;top:70px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}.toc .toc-title{font-size:12px;color:var(--text-muted);letter-spacing:.06em;padding:4px 8px 10px}.toc button{display:block;width:100%;text-align:left;border:none;background:transparent;border-radius:6px;padding:8px 10px;color:var(--text-muted);font-size:13px}.toc button:hover{background:var(--bg-subtle);color:var(--text)}.toc button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}.toc button .ch-no{font-family:var(--mono);font-size:11px;display:block;opacity:.7}
   .article{max-width:700px;font-family:var(--serif);font-size:17px;line-height:1.85;color:var(--text)}.article h1{font-size:26px;line-height:1.4;margin:0 0 8px}.article h2{font-size:20px;margin:1.6em 0 .5em}.article h3{font-size:17px;margin:1.4em 0 .4em}.article p{margin:.7em 0}.article blockquote{border-left:3px solid var(--accent);margin:1em 0;padding:.2em 1em;color:var(--text-muted);background:var(--accent-soft);border-radius:0 6px 6px 0}.article ul,.article ol{padding-left:1.4em;margin:.6em 0}.article li{margin:.25em 0}.article code{background:var(--bg-subtle);padding:2px 5px;border-radius:4px;font-family:var(--mono);font-size:.85em}.article pre{background:var(--bg-subtle);border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6}.article pre code{background:none;padding:0}.article table{border-collapse:collapse;margin:1em 0;font-size:14px;width:100%}.article th,.article td{border:1px solid var(--border);padding:6px 10px;text-align:left}.article th{background:var(--bg-subtle);font-family:var(--sans)}.article hr{border:none;border-top:1px solid var(--border);margin:1.6em 0}.article a{color:var(--accent)}
   .readnav{display:flex;justify-content:space-between;margin-top:28px;gap:12px}.readnav button{flex:1}.readnav button:disabled{opacity:.4;cursor:not-allowed}
@@ -109,7 +123,12 @@
         <h2>人物关系</h2>
         <p class="lede">点击节点查看角色详情。节点颜色区分主要 / 次要角色。</p>
         <div class="section-title">关系图</div>
-        <div class="chartwrap card" style="padding:10px;margin-bottom:20px;"><canvas id="graph"></canvas></div>
+        <div class="graphwrap card" style="padding:10px;margin-bottom:20px;">
+          <div class="gfx"><canvas id="graph"></canvas></div>
+          <aside class="info" id="graphInfo">
+            <div class="empty">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>
+          </aside>
+        </div>
         <div class="section-title">角色列表</div>
         <div class="char-list" id="charList"></div>
       </section>
@@ -148,6 +167,7 @@ const MD = (() => {
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
     .replace(/(^|[\s])\/([^\/\s][^\/]*?)\/([^\s.,;:!?]|$)/g, '$1<em>$2</em>$3');
+  function parseInline(s) { return inline(s || ""); }
   function parse(src) {
     const lines = src.replace(/\r\n?/g,"\n").split("\n");
     let i = 0; const out = []; let pbuf = [];
@@ -190,7 +210,7 @@ const MD = (() => {
     flushP(); flushT();
     return out.join("\n");
   }
-  return { parse };
+  return { parse, parseInline };
 })();
 
 /* ---------- 通用工具 ---------- */
@@ -221,19 +241,26 @@ async function readTextFromEntries(entries, relPath) {
 
 async function collectRoles(handle, entries) {
   const roles = [];
-  const scan = async (tier, folder) => {
-    let dh;
-    try { dh = await handle.getDirectoryHandle(folder); } catch { return; }
-    for await (const [name, h] of dh.entries()) {
-      if (name.endsWith(".md") && h.kind === "file") {
-        roles.push({ tier, name: name.replace(/\.md$/, ""), text: await (await h.getFile()).text() });
+  if (handle) {
+    // 递归找出所有 .md 文件，再按 roles/(major|minor|...) 路径归类
+    const ROLE_RE = /roles\/(?:major|minor|主要角色|次要角色)\/(.+?\.(?:md|MD))$/;
+    async function walk(dir, prefix) {
+      for await (const [name, h] of dir.entries()) {
+        const path = prefix + "/" + name;
+        if (h.kind === "file" && name.endsWith(".md")) {
+          const m = path.match(ROLE_RE);
+          if (m) {
+            const tier = /次要|minor/.test(path) ? "次要角色" : "主要角色";
+            let text = "";
+            try { text = await (await h.getFile()).text(); } catch {}
+            roles.push({ tier, name: m[1].replace(/\.md$/i, ""), text });
+          }
+        } else if (h.kind === "directory") {
+          try { await walk(h, path); } catch {}
+        }
       }
     }
-  };
-  if (handle) {
-    for (const t of [["主要角色","major"],["次要角色","minor"],["major","major"],["minor","minor"]]) {
-      await scan(t[1], t[0]);
-    }
+    try { await walk(handle, ""); } catch {}
   } else if (entries) {
     for (const e of entries) {
       const m = e.fullPath.match(/roles\/(?:major|minor|主要角色|次要角色)\/(.+?\.(?:md|MD))$/);
@@ -369,6 +396,20 @@ function sectionLines(text, re){
 }
 function sectionOf(text, re){ return sectionLines(text, re).slice(0, 6).join("；"); }
 
+// 列表式角色档案里的精准字段提取：从 `- **标签**：内容` 行里按标签关键字精确匹配某一条，避免
+// "## 欲望·恐惧·创伤" 这种联合标题造成 sectionOf() 一次把多段内容整块吞并（造成不同字段显示完全相同内容）。
+function roleField(text, labels){
+  if (!text) return "";
+  const labelList = (Array.isArray(labels) ? labels : [labels]).map(s => String(s).toLowerCase());
+  for (const raw of text.split("\n")) {
+    const m = raw.match(/^\s*[-*]\s*\*\*\s*([^*]+?)\s*\*\*\s*[：:]\s*(.*)$/);
+    if (!m) continue;
+    const tag = m[1].trim().toLowerCase();
+    if (labelList.some(l => tag === l || tag.includes(l) || l.includes(tag))) return m[2].trim();
+  }
+  return "";
+}
+
 function calcSettingsCompletion(files){
   const domains = [
     { key:"story_frame", title:"故事框架 (story_frame.md)", subs:["主题[与和]基调","前[台景]故事|背景故事","核心冲突|对手","世界[法]?[则律]|[世]?[界定]?[法文]?","终局[目][标]|[最]终[目][标点]"] },
@@ -424,9 +465,15 @@ function parseCurrentState(text){
   return items.length ? items.join("<br>") : `<span class="muted">暂无状态记录</span>`;
 }
 function buildGraph(roles){
-  const nodes = roles.map((r,i) => ({ i, name:r.name, tier:r.tier, color: /次要|minor/.test(r.tier) ? "#6b6760" : "var(--accent)",
-    func: sectionOf(r.text,"Story [Ff]unction|故事功能|角色[定定]?[位义]|功能"), desire: sectionOf(r.text,"[Dd]esire|欲望"), fear: sectionOf(r.text,"[Ff]ear|恐惧"),
-    state: sectionOf(r.text,"[Cc]urrent [Ss]tate|当前状态"), arc: sectionOf(r.text,"[Aa]rc|弧线|成长"), secrets: sectionOf(r.text,"[Ss]ecrets|秘密") }));
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#b5651d";
+  const minorColor = getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim() || "#6b6760";
+  const nodes = roles.map((r,i) => ({ i, name:r.name, tier:r.tier, color: /次要|minor/.test(r.tier) ? minorColor : accent,
+    func: sectionOf(r.text,"Story [Ff]unction|故事功能|角色[定定]?[位义]|功能"),
+    desire: roleField(r.text, ["欲望", "desire"]) || sectionOf(r.text,"[Dd]esire|欲望"),
+    fear: roleField(r.text, ["恐惧", "fear"]) || sectionOf(r.text,"[Ff]ear|恐惧"),
+    state: roleField(r.text, ["当前状态", "current state"]) || sectionOf(r.text,"[Cc]urrent [Ss]tate|当前状态"),
+    arc: roleField(r.text, ["弧线", "成长", "arc"]) || sectionOf(r.text,"[Aa]rc|弧线|成长"),
+    secrets: sectionOf(r.text,"[Ss]ecrets|秘密") }));
   const nameIdx = new Map(nodes.map(nd => [nd.name.toLowerCase(), nd.i]));
   const edges = [];
   roles.forEach(r => {
@@ -503,11 +550,11 @@ async function render(){
   $("charList").innerHTML = graph.nodes.map(nd => `
     <div class="charcard" data-i="${nd.i}">
       <div class="name">${escHtml(nd.name)}</div>
-      <div class="tier">${escHtml(nd.tier)}${nd.func ? " · " + escHtml(nd.func) : ""}</div>
-      ${nd.desire ? `<div class="kv"><b>欲</b>${escHtml(nd.desire)}</div>` : ""}
-      ${nd.fear ? `<div class="kv"><b>惧</b>${escHtml(nd.fear)}</div>` : ""}
-      ${nd.state ? `<div class="kv"><b>今</b>${escHtml(nd.state)}</div>` : ""}
-      ${nd.arc ? `<div class="kv"><b>弧</b>${escHtml(nd.arc)}</div>` : ""}
+      <div class="tier">${escHtml(nd.tier)}${nd.func ? " · " + MD.parseInline(nd.func) : ""}</div>
+      ${nd.desire ? `<div class="kv"><b>欲</b>${MD.parseInline(nd.desire)}</div>` : ""}
+      ${nd.fear ? `<div class="kv"><b>惧</b>${MD.parseInline(nd.fear)}</div>` : ""}
+      ${nd.state ? `<div class="kv"><b>今</b>${MD.parseInline(nd.state)}</div>` : ""}
+      ${nd.arc ? `<div class="kv"><b>弧</b>${MD.parseInline(nd.arc)}</div>` : ""}
     </div>`).join("");
   $("charList").onclick = e => { const c = e.target.closest(".charcard"); if (c) selectNode(+c.dataset.i); };
 
@@ -523,6 +570,19 @@ const Graph = (() => {
     const resize = () => { const r = canvas.getBoundingClientRect(); const dpr = window.devicePixelRatio||1;
       canvas.width = r.width*dpr; canvas.height = r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); W=r.width; H=r.height; };
     resize(); window.addEventListener("resize", resize);
+    // 初次 init 时 canvas 可能仍在 display:none 的面板内，getBoundingClientRect 会返回 0×0。
+    // 用 ResizeObserver 监听画布真实尺寸，切到该 tab 时（从 0 变为实际像素）重设画布并重定位节点。
+    if (typeof ResizeObserver !== "undefined") {
+      let lastW = 0, lastH = 0;
+      const ro = new ResizeObserver(() => {
+        const r = canvas.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0 && (Math.abs(r.width - lastW) > 0.5 || Math.abs(r.height - lastH) > 0.5)) {
+          lastW = r.width; lastH = r.height; resize();
+          if (nodes.length) for (const n of nodes) { n.x = Math.max(40, Math.min(W - 40, n.x)); n.y = Math.max(40, Math.min(H - 40, n.y)); }
+        }
+      });
+      ro.observe(canvas);
+    }
     nodes = gdata.nodes.map((n,i) => ({ ...n, x:W/2+(Math.random()-0.5)*200, y:H/2+(Math.random()-0.5)*200, vx:0, vy:0 }));
     edges = gdata.edges;
     canvas.onpointerdown = e => { const h = nodeAt(e); dragging = h; if (h>=0) selectNode(h); };
@@ -535,30 +595,60 @@ const Graph = (() => {
   function degree(i){ return edges.filter(e=>e.s===i||e.t===i).length; }
   function loop(){
     for (const n of nodes){ n.vx*=0.85; n.vy*=0.85; }
-    for (const e of edges){ const a=nodes[e.s],b=nodes[e.t]; const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1; const f=(d-110)*0.005,ux=dx/d,uy=dy/d; a.vx+=ux*f;a.vy+=uy*f;b.vx-=ux*f;b.vy-=uy*f; }
-    for (let i=0;i<nodes.length;i++){ for(let j=i+1;j<nodes.length;j++){ const a=nodes[i],b=nodes[j]; let dx=b.x-a.x,dy=b.y-a.y; const d=Math.sqrt(dx*dx+dy*dy)||1,f=-800/(d*d),ux=dx/d,uy=dy/d; a.vx+=ux*f;a.vy+=uy*f;b.vx-=ux*f;b.vy-=uy*f; } }
+    for (const e of edges){ const a=nodes[e.s],b=nodes[e.t]; const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1; const f=(d-170)*0.008,ux=dx/d,uy=dy/d; a.vx+=ux*f;a.vy+=uy*f;b.vx-=ux*f;b.vy-=uy*f; }
+    for (let i=0;i<nodes.length;i++){ for(let j=i+1;j<nodes.length;j++){ const a=nodes[i],b=nodes[j]; let dx=b.x-a.x,dy=b.y-a.y; const d=Math.sqrt(dx*dx+dy*dy)||1,f=-1400/(d*d),ux=dx/d,uy=dy/d; a.vx+=ux*f;a.vy+=uy*f;b.vx-=ux*f;b.vy-=uy*f; } }
     for (const n of nodes){ n.vx+=(W/2-n.x)*0.0012; n.vy+=(H/2-n.y)*0.0012; if(nodes.indexOf(n)!==dragging){ n.x+=n.vx;n.y+=n.vy; n.x=Math.max(30,Math.min(W-30,n.x)); n.y=Math.max(30,Math.min(H-30,n.y)); } }
     draw(); raf=requestAnimationFrame(loop);
   }
   function draw(){
     ctx.clearRect(0,0,W,H);
-    if(!nodes.length){ ctx.fillStyle="var(--text-muted)"; ctx.font="14px var(--sans)"; ctx.textAlign="center"; ctx.fillText("暂无角色数据",W/2,H/2); return; }
-    ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--border").trim(); ctx.lineWidth=1.4;
-    for(const e of edges){ const a=nodes[e.s],b=nodes[e.t]; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+    if(!nodes.length){ ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim(); ctx.font="14px var(--sans)"; ctx.textAlign="center"; ctx.fillText("暂无角色数据",W/2,H/2); return; }
+    const lineColor = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+    const labelColor = getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim();
+    const bgSoft = getComputedStyle(document.documentElement).getPropertyValue("--bg-subtle").trim();
+    // 连线：加粗并带半透明，中点标注关系
+    for(const e of edges){
+      const a=nodes[e.s],b=nodes[e.t];
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle=lineColor; ctx.globalAlpha=0.55; ctx.lineWidth=1.8; ctx.stroke(); ctx.globalAlpha=1;
+      if(e.label){
+        const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+        const txt=e.label;
+        ctx.font="11px var(--sans)";
+        const tw=ctx.measureText(txt).width;
+        ctx.fillStyle=bgSoft; ctx.fillRect(mx-tw/2-4,my-7,tw+8,14);
+        ctx.fillStyle=labelColor; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(txt,mx,my);
+      }
+    }
     for(const n of nodes){
       const r=radius(n); ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fillStyle=n.color; ctx.fill();
-      if(nodes.indexOf(n)===selected){ ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.stroke(); }
+      if(nodes.indexOf(n)===selected){ ctx.lineWidth=3; ctx.strokeStyle=accent; ctx.stroke(); }
       ctx.fillStyle="#fff"; ctx.font=`${Math.round(r*0.7)}px var(--sans)`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(n.name.slice(0,3),n.x,n.y);
-      ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text").trim(); ctx.font="12px var(--sans)"; ctx.fillText(n.name,n.x,n.y+r+12);
+      ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text").trim(); ctx.font="12px var(--sans)"; ctx.textBaseline="alphabetic"; ctx.fillText(n.name,n.x,n.y+r+12);
     }
-    if(selected>=0){ const n=nodes[selected]; ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--accent").trim(); ctx.font="12px var(--sans)"; ctx.textBaseline="middle"; const info=[n.func,n.desire,n.fear,n.state,n.arc].filter(Boolean).join(" · "); if(info) ctx.fillText(info.slice(0,60),n.x,n.y-radius(n)-8); }
-    ctx.textBaseline="alphabetic";
   }
-  function setSelect(i){ selected=i; draw(); }
+  function setSelect(i){
+    selected=i; draw();
+    const info=$("graphInfo");
+    if(i<0){ info.innerHTML='<div class="empty">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>'; return; }
+    const n=nodes[i];
+    const fields=[["故事功能",n.func],["欲望",n.desire],["恐惧",n.fear],["当前状态",n.state],["弧线",n.arc],["秘密",n.secrets]].filter((a)=>a[1]);
+    const rels=edges.filter(e=>e.s===i||e.t===i).map(e=>{ const o=nodes[e.s===i?e.t:e.s]; return `<div style="margin-bottom:6px"><span class="rname">${escHtml(o.name)}</span>${e.label?' — '+MD.parseInline(e.label):''}</div>`; });
+    info.innerHTML=`<div class="name">${escHtml(n.name)}</div><div class="tier">${escHtml(n.tier)}</div>` +
+      (fields.length?`<dl>${fields.map(([k,v])=>`<dt>${escHtml(k)}</dt><dd>${MD.parseInline(v)}</dd>`).join("")}</dl>`:'') +
+      (rels.length?`<div class="rels" style="font-size:13px;color:var(--text-muted)">${rels.join("")}</div>`:'');
+  }
   return { init, setSelect };
 })();
 function drawGraph(g){ Graph.init(g); }
-function selectNode(i){ Graph.setSelect(i); const el=document.querySelector(`.charcard[data-i="${i}"]`); if(el){ el.scrollIntoView({block:"nearest",behavior:"smooth"}); el.style.borderColor="var(--accent)"; } }
+let prevCard=null;
+function selectNode(i){
+  Graph.setSelect(i);
+  if(prevCard) prevCard.style.borderColor="";
+  const el=document.querySelector(`.charcard[data-i="${i}"]`);
+  if(el){ el.style.borderColor="var(--accent)"; prevCard=el; }
+}
 
 /* ---------- 阅读 ---------- */
 let currentChapter=-1;
