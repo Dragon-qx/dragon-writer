@@ -4,26 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="58e3aec4-34c3-4a26-855e-308e09cc9a7b" name="Changes" comment="feat：v2">
-      <change afterPath="$PROJECT_DIR$/dash_block.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tab-chars.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tab-overview.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tab-read.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tab-settings-content.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tab-settings.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tb-chars.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tb-overview.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tb-read.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tb-settings-content.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/tb-settings.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/test-1-landing.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/test-2-after-pick.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+    <list default="true" id="58e3aec4-34c3-4a26-855e-308e09cc9a7b" name="Changes" comment="feat：v2.2">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/books/sample-book/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/books/sample-book/dashboard.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/SKILL.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/SKILL.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dragon-writer/references/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/references/dashboard.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/dashboard.png" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,7 +62,9 @@
       <workItem from="1783801762059" duration="15868000" />
       <workItem from="1784378894418" duration="1353000" />
       <workItem from="1784424586144" duration="2000" />
-      <workItem from="1784429950949" duration="13030000" />
+      <workItem from="1784429950949" duration="13408000" />
+      <workItem from="1784472463440" duration="333000" />
+      <workItem from="1784733067678" duration="2573000" />
     </task>
     <task id="LOCAL-00001" summary="feat：v1">
       <option name="closed" value="true" />
@@ -120,7 +106,23 @@
       <option name="project" value="LOCAL" />
       <updated>1784433860883</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="feat：v2.2">
+      <option name="closed" value="true" />
+      <created>1784471059688</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1784471059688</updated>
+    </task>
+    <task id="LOCAL-00007" summary="feat：v2.2">
+      <option name="closed" value="true" />
+      <created>1784471064086</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1784471064086</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -140,6 +142,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="feat：v1" />
     <MESSAGE value="feat：v2" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat：v2" />
+    <MESSAGE value="feat：v2.2" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat：v2.2" />
   </component>
 </project>

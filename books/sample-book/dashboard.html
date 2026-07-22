@@ -227,12 +227,14 @@ let data = null;
 async function readTextFromHandle(handle, path) {
   const parts = path.split("/");
   let dir = handle;
-  for (let i = 0; i < parts.length - 1; i++) {
-    if (!parts[i]) continue;
-    dir = await dir.getDirectoryHandle(parts[i]);
-  }
-  const fh = await dir.getFileHandle(parts[parts.length - 1]);
-  return await (await fh.getFile()).text();
+  try {
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!parts[i]) continue;
+      dir = await dir.getDirectoryHandle(parts[i]);
+    }
+    const fh = await dir.getFileHandle(parts[parts.length - 1]);
+    return await (await fh.getFile()).text();
+  } catch { return null; }
 }
 async function readTextFromEntries(entries, relPath) {
   const f = entries.find(e => e.fullPath.endsWith("/" + relPath) || e.fullPath === relPath);
@@ -342,7 +344,7 @@ async function loadBook(handle, entries) {
       read("story/style_guide.md"), read("story/audit-drift.md")
     ]);
     data = {
-      book: bjs ? JSON.parse(bjs) : {},
+      book: bjs ? JSON.parse(bjs.replace(/^﻿/, "")) : {},
       chapters: await collectChapters(handle, entries),
       roles: await collectRoles(handle, entries),
       files: { story_frame: sf, volume_map: vm, book_rules: br, current_state: cs, chapter_summaries: summ, style_guide: style, audit_drift: drift }
