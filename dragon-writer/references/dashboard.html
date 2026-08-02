@@ -367,7 +367,7 @@ const Utils = (() => {
 
     const get = (name) => cssVarCache[name] || readCSSVar(name);
 
-    return { init, toggle, apply, get, refresh: refreshCache };
+    return { init, toggle, apply, get, refresh: refreshCache, get current() { return current; } };
   })();
 
   // 键盘快捷键
@@ -1729,7 +1729,8 @@ const Reader = {
     const escQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp('(' + escQ + ')', 'gi');
     article.innerHTML = clean.replace(re, (m) => {
-      const pos = text.indexOf(m);
+      // 大小写不敏感的位置查找（避免 indexOf 因大小写不同而失败）
+      const pos = text.toLowerCase().indexOf(m.toLowerCase());
       const isCurrent = pos === matches[current];
       return isCurrent ? '<mark class="current">' + m + '</mark>' : '<mark>' + m + '</mark>';
     });
@@ -1794,6 +1795,8 @@ let autoResumed = false;
 
 const initApp = () => {
   Utils.theme.init();
+  const initialMode = Utils.theme.current;
+  document.getElementById('themeBtn').textContent = initialMode === 'dark' ? '☀' : initialMode === 'light' ? '🌙' : '🌓';
   document.getElementById('themeBtn').addEventListener('click', () => {
     const mode = Utils.theme.toggle();
     document.getElementById('themeBtn').textContent = mode === 'dark' ? '☀' : mode === 'light' ? '🌙' : '🌓';
