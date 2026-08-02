@@ -705,7 +705,10 @@ async function readTextFromHandle(handle, path) {
   } catch { return null; }
 }
 async function readTextFromEntries(entries, relPath) {
-  const f = entries.find(e => e.fullPath.endsWith("/" + relPath) || e.fullPath === relPath);
+  const f = entries.find(e => {
+    const rel = e.webkitRelativePath || e.relativePath || e.fullPath;
+    return rel.endsWith("/" + relPath) || rel === relPath;
+  });
   return f ? await f.text() : null;
 }
 
@@ -732,9 +735,10 @@ async function collectRoles(handle, entries) {
     try { await walk(handle, ""); } catch {}
   } else if (entries) {
     for (const e of entries) {
-      const m = e.fullPath.match(/roles\/(?:major|minor|主要角色|次要角色)\/(.+?\.(?:md|MD))$/);
+      const rel = e.webkitRelativePath || e.relativePath || e.fullPath;
+      const m = rel.match(/roles\/(?:major|minor|主要角色|次要角色)\/(.+?\.(?:md|MD))$/);
       if (m) {
-        const tier = /次要|minor/.test(e.fullPath) ? "次要角色" : "主要角色";
+        const tier = /次要|minor/.test(rel) ? "次要角色" : "主要角色";
         roles.push({ tier, name: m[1].replace(/\.md$/i,""), text: await e.text() });
       }
     }
@@ -749,7 +753,8 @@ async function collectChapters(handle, entries) {
   try { dh = await handle.getDirectoryHandle("chapters"); } catch { dh = null; }
   if (dh) { for await (const [n, h] of dh.entries()) { if (n.endsWith(".md") && h.kind === "file") files.push({ n, t: await (await h.getFile()).text() }); } }
   else if (entries) {
-    files = entries.filter(e => /chapters\/.+\.(md|MD)$/.test(e.fullPath)).map(e => ({ n: e.fullPath.split("/").pop(), _t: e.text() }));
+    files = entries.filter(e => /chapters\/.+\.(md|MD)$/.test(e.webkitRelativePath || e.relativePath || e.fullPath))
+      .map(e => ({ n: (e.webkitRelativePath || e.relativePath || e.fullPath).split("/").pop(), _t: e.text() }));
   }
   for (const f of files.sort((a,b) => a.n.localeCompare(b.n, "zh"))) {
     const text = f.t || await f._t;
@@ -768,7 +773,7 @@ async function listTopLevel(handle, entries) {
       return names.slice(0, 20).join("、");
     } else if (entries) {
       const seen = new Set();
-      for (const e of entries) { const top = e.fullPath.split("/")[0]; if (!seen.has(top)) seen.add(top); }
+      for (const e of entries) { const rel = e.webkitRelativePath || e.relativePath || e.fullPath; const top = rel.split("/")[0]; if (!seen.has(top)) seen.add(top); }
       return [...seen].slice(0, 20).join("、");
     }
   } catch {}
@@ -785,10 +790,32 @@ async function validateBookDir(handle, entries) {
   let hasChapters = false;
   try {
     if (handle) { const dh = await handle.getDirectoryHandle("chapters"); hasChapters = !!dh; }
-    else if (entries) { hasChapters = entries.some(e => /chapters\/.+\.(md|MD)$/.test(e.fullPath)); }
+    else if (entries) { hasChapters = entries.some(e => /chapters\/.+\.(md|MD)$/.test(e.webkitRelativePath || e.relativePath || e.fullPath)); }
   } catch { hasChapters = false; }
   if (!hasChapters) missing.push("chapters/");
   return missing;
+}
+
+// 别名映射：文件契约中定义的旧命名兼容（F7）
+const ALIASES = {
+  'story/outline/story_frame.md': ['story/story_bible.md', 'story/setting.md', 'story/world.md'],
+  'story/book_rules.md': ['story/rules.md'],
+  'story/outline/volume_map.md': ['story/volume_map.md'],
+  'story/audit-drift.md': ['story/audit_drift.md'],
+};
+
+// 带别名回退的读取：先尝试标准路径，失败则依次尝试别名（F7）
+async function readWithAlias(handle, entries, path) {
+  const primary = handle ? await readTextFromHandle(handle, path) : await readTextFromEntries(entries, path);
+  if (primary != null) return primary;
+  const aliases = ALIASES[path];
+  if (aliases) {
+    for (const alias of aliases) {
+      const fallback = handle ? await readTextFromHandle(handle, alias) : await readTextFromEntries(entries, alias);
+      if (fallback != null) return fallback;
+    }
+  }
+  return null;
 }
 
 async function loadBook(handle, entries) {
@@ -801,7 +828,7 @@ async function loadBook(handle, entries) {
       "请选择书的根目录（即含 book.json、chapters/、story/ 的那一层）。"
     );
   }
-  const read = (p) => handle ? readTextFromHandle(handle, p) : readTextFromEntries(entries, p);
+  const read = (p) => readWithAlias(handle, entries, p);
   const [bjs, sf, vm, br, cs, summ, style, drift] = await Promise.all([
     read("book.json"), read("story/outline/story_frame.md"), read("story/outline/volume_map.md"),
     read("story/book_rules.md"), read("story/current_state.md"), read("story/chapter_summaries.md"),
