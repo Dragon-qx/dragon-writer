@@ -220,8 +220,9 @@ console.log("\n=== Markdown 任务列表 ===");
 test("parse 解析任务列表", () => {
   const md = "- [x] 已完成\n- [ ] 未完成";
   const out = MDParser.parse(md);
-  ok(out.includes("✓"), "已完成应有 ✓");
-  ok(out.includes("○"), "未完成应有 ○");
+  ok(out.includes('type="checkbox"'), "应生成 checkbox 输入框");
+  ok(out.includes("checked"), "已完成应有 checked 属性");
+  ok(out.includes("task-list"), "应包含 task-list 类");
 });
 
 console.log("\n=== 完成度计算 ===");

@@ -4,10 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="58e3aec4-34c3-4a26-855e-308e09cc9a7b" name="Changes" comment="feat：v3">
+    <list default="true" id="58e3aec4-34c3-4a26-855e-308e09cc9a7b" name="Changes" comment="feat：v3.1">
+      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/auto_update.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/SKILL.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/SKILL.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dragon-writer/assets/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/assets/dashboard.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dragon-writer/tests/js/test_dashboard.js" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/tests/js/test_dashboard.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -130,7 +131,15 @@
       <option name="project" value="LOCAL" />
       <updated>1785673547295</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="feat：v3.1">
+      <option name="closed" value="true" />
+      <created>1785674653120</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1785674653120</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -164,6 +173,7 @@
     <MESSAGE value="feat：v2" />
     <MESSAGE value="feat：v2.2" />
     <MESSAGE value="feat：v3" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat：v3" />
+    <MESSAGE value="feat：v3.1" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat：v3.1" />
   </component>
 </project>

@@ -159,10 +159,10 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .article blockquote{border-left:3px solid var(--accent);margin:12px 0;padding:8px 16px;background:var(--bg-subtle);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
 
 /* ========== Graph 关系图 ========== */
-.graph-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;min-height:400px}
-.graph-canvas-wrap{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}
-.graph-canvas-wrap canvas{display:block;width:100%;height:100%;min-height:400px;touch-action:none}
-.graph-sidebar{display:flex;flex-direction:column;gap:12px}
+.graph-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;min-height:400px;align-items:start}
+.graph-canvas-wrap{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;height:420px;min-height:420px;max-height:70vh}
+.graph-canvas-wrap canvas{display:block;width:100%;height:100%;touch-action:none}
+.graph-sidebar{display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow-y:auto}
 #graphInfo{font-size:13px;line-height:1.6}
 #graphInfo .name{font-family:var(--serif);font-size:18px;font-weight:600;margin-bottom:4px}
 #graphInfo .tier{font-size:12px;color:var(--text-muted);margin-bottom:8px}
@@ -192,35 +192,38 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 /* 图表颜色满足色觉缺陷场景：不只依赖颜色，还依赖形状（已在 GraphEngine.draw 中区分方圆） */
 
 /* ========== Responsive ========== */
+/* 平板 / 窄桌面（≤1024px） */
+@media(max-width:1024px) {
+  .graph-layout{grid-template-columns:1fr 240px}
+}
+/* 中小屏（≤820px）：tabs 移至上方面板 */
 @media(max-width:820px) {
   .layout{grid-template-columns:1fr}
-  .tabs[role="tablist"]{flex-direction:row;flex-wrap:wrap;height:auto;position:static}
+  .tabs[role="tablist"]{flex-direction:row;flex-wrap:wrap;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border)}
   main.content{padding:20px 16px 60px}
   .col2{grid-template-columns:1fr}
+  .graph-layout{grid-template-columns:1fr}
+  .graph-canvas-wrap{height:360px;min-height:360px}
+  .graph-sidebar{max-height:300px;overflow-y:auto}
 }
-/* 小屏手机（375-768）：tablist 横向滚动、关系图与角色详情堆叠、目录可收起 */
+/* 小屏手机（≤768px） */
 @media(max-width:768px) {
   .tabs[role="tablist"]{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:2px;padding:10px 8px}
   .tabs[role="tablist"] button[role="tab"]{white-space:nowrap;font-size:13px;padding:8px 10px}
   .tabs[role="tablist"] .navlabel{display:none}
-  .graph-layout{grid-template-columns:1fr}
-  .graph-canvas-wrap canvas{min-height:300px}
-  .graph-sidebar{max-height:300px;overflow-y:auto}
+  .graph-canvas-wrap{height:320px;min-height:320px;max-height:50vh}
+  .graph-sidebar{max-height:260px;overflow-y:auto}
   .reader{grid-template-columns:1fr}
   .toc{max-height:200px;overflow-y:auto}
   .appbar{flex-wrap:wrap;padding:10px 16px;gap:8px}
   .appbar .booktitle{font-size:16px;max-width:60vw}
 }
-/* 极小屏（320-375）：确保不撑破页面 */
+/* 极小屏（≤375px） */
 @media(max-width:375px) {
   main.content{padding:14px 10px 40px}
   .appbar .booksub{display:none}
   .reader-controls{font-size:13px}
   .article{font-size:13px}
-}
-/* 横屏平板 / 窄桌面（820-1024） */
-@media(min-width:821px) and (max-width:1024px) {
-  .graph-layout{grid-template-columns:1fr 240px}
 }
 /* 表格、代码块和趋势图不会撑破页面 */
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -519,225 +522,393 @@ const Store = (() => {
   return { state, get, set, reset, bumpVersion, needsRender };
 })();
 
-/* ---------- MDParser Markdown 解析模块 ----------
-   支持的语法：标题（h1-h6）、段落、引用、代码块（``` / ~~~）、列表（无序/有序/任务列表）、
-   表格（含转义管道符）、链接（含安全校验）、强调（bold/italic/del/code）、水平线。
-   不支持的语法降级规则：
-   - 嵌套列表：按扁平列表处理，不保留层级
-   - 原始 HTML：通过 parseInline 的转义自动降级为纯文本
-   - 图片：![alt](url) 不识别，按普通文本渲染（无 img 标签输出）
-   - 超大章节：采用同步解析，无流式策略（建议单章 < 1MB）
-   自定义扩展：硬换行（行尾双空格 → <br>）、任务列表标记（✓ / ○）。
-   ================================================ */
+/* ---------- MDParser Markdown 解析模块（CommonMark 兼容） ==========
+   支持的块级语法：段落、标题（ATX h1-h6 / Setext h1-h2）、代码块（缩进 / 围栏）、
+   引用（含嵌套）、列表（无序/有序/任务，含嵌套）、表格（GFM 含对齐）、水平线。
+   支持的行内语法：强调（** / * / __ / _）、删除线（~~）、代码（`）、链接、图片、
+   硬换行（行尾双空格或 \）、自动链接。
+   安全：URL 经协议白名单校验；HTML 实体自动转义；原始 HTML 降级为纯文本。
+   ==================================================================== */
 const MDParser = (() => {
-  const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+  const escAttr = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
-  // 链接协议白名单 + 安全渲染
+  // ---- URL 安全校验 ----
   const ALLOWED_PROTOCOLS = /^(https?:|mailto:|#)/i;
   const BLOCKED_PROTOCOLS = /^(javascript|data|vbscript|file):/i;
-  const CONTROL_CHARS = /[\x00-\x1f\x7f\t]/g; // 控制字符 + tab（保留 \n 在其它场景处理）
+  const CONTROL_CHARS = /[\x00-\x1f\x7f\t]/g;
 
-  // 清洗 URL：去除控制字符和前导空白，再做协议校验
   function sanitizeUrl(raw) {
     if (!raw) return null;
     let url = String(raw).replace(CONTROL_CHARS, '').trim();
-
-    // 去除首尾引号注入（如 "javascript:alert(1)"）
     url = url.replace(/^["']+|["']+$/g, '').trim();
     if (!url) return null;
-
-    // 明确处理协议相对 URL（//example.com）—— 不允许，视为危险
     if (/^\/\//.test(url)) return null;
-
-    // 反斜线绕过（如 java\script:、\\example.com）→ 统一替换为正向斜线后再校验
     url = url.replace(/\\/g, '/');
-
-    // 去除 HTML 实体编码绕过（如 &#106;avascript:、&#x6A;avascript:）
     url = url.replace(/&#(\d+);/g, (m, d) => String.fromCharCode(d))
              .replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCharCode(parseInt(h, 16)));
     url = url.replace(CONTROL_CHARS, '').trim();
     if (!url) return null;
-
-    // Unicode 冒号绕过（如 java:script:、全角冒号：）→ 统一为 ASCII 冒号
-    url = url.replace(/：/g, ':').replace(/:/g, ':');
-
-    // 再次清理实体解码后可能出现的空白/控制字符
+    url = url.replace(/：/g, ':');
     url = url.replace(/\s+/g, '').replace(CONTROL_CHARS, '');
     if (!url) return null;
-
-    // 明确禁止的危险协议
     if (BLOCKED_PROTOCOLS.test(url)) return null;
-    // 无协议或相对路径（以 / 或字母开头且不含 ://）视为相对路径
     if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) {
-      // 相对链接只允许安全字符和预期路径
-      if (/^[a-zA-Z0-9_\-./?#&=]+$/.test(url)) return url;
-      return null;
+      return /^[a-zA-Z0-9_\-./?#&=]+$/.test(url) ? url : null;
     }
-    // 有协议则必须在白名单中
     return ALLOWED_PROTOCOLS.test(url) ? url : null;
   }
 
-  // 转义 HTML 属性值中的 & < > " '
-  function escAttr(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+  // ---- 行内解析（递归下降，正确处理嵌套） ----
+  // placeholders 数组在递归调用间共享，确保嵌套占位符可正确恢复
+  function parseInline(text, placeholders) {
+    if (!text) return '';
+    if (!placeholders) placeholders = [];
+    const ph = html => { placeholders.push(html); return `\x00${placeholders.length - 1}\x00`; };
+
+    // 1. 行内代码（最高优先级，内容不解析）
+    text = text.replace(/`+([^`]+?)`+/g, (m, code) => ph('<code>' + esc(code) + '</code>'));
+
+    // 2. 图片 ![alt](url "title")（必须在链接之前处理）
+    text = text.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (m, alt, url, title) => {
+      const safeUrl = sanitizeUrl(url);
+      if (safeUrl == null) return ph(esc(alt));
+      const t = title ? ` title="${escAttr(title)}"` : '';
+      return ph(`<img src="${escAttr(safeUrl)}" alt="${escAttr(alt)}"${t}>`);
+    });
+
+    // 3. 链接 [text](url "title")
+    text = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (m, linkText, url, title) => {
+      const safeUrl = sanitizeUrl(url);
+      if (safeUrl == null) return ph(esc(linkText));
+      const ext = /^https?:/i.test(safeUrl);
+      const rel = ext ? ' rel="noopener noreferrer" target="_blank"' : '';
+      const t = title ? ` title="${escAttr(title)}"` : '';
+      return ph(`<a href="${escAttr(safeUrl)}"${t}${rel}>` + parseInline(linkText, placeholders) + '</a>');
+    });
+
+    // 4. 粗斜体 ***text*** / ___text___
+    text = text.replace(/\*\*\*((?:[^*]|\*(?!\*))+)\*\*\*/g, (m, t) => ph('<strong><em>' + parseInline(t, placeholders) + '</em></strong>'));
+    text = text.replace(/___((?:[^_]|_(?!_))+)_/g, (m, t) => ph('<strong><em>' + parseInline(t, placeholders) + '</em></strong>'));
+
+    // 5. 粗体 **text** / __text__（内容可含单个 * 但不含 **）
+    text = text.replace(/\*\*((?:[^*]|\*(?!\*))+)\*\*/g, (m, t) => ph('<strong>' + parseInline(t, placeholders) + '</strong>'));
+    text = text.replace(/__((?:[^_]|_(?!_))+?)__/g, (m, t) => ph('<strong>' + parseInline(t, placeholders) + '</strong>'));
+
+    // 6. 斜体 *text* / _text_（内容可含 ** 但不含 ***）
+    text = text.replace(/(?<!\*)\*((?:[^*]|\*{1,2}(?!\*))+)\*(?!\*)/g, (m, t) => ph('<em>' + parseInline(t, placeholders) + '</em>'));
+    text = text.replace(/(?<!\w)_((?:[^_]|_{1,2}(?!_))+)_(?!\w)/g, (m, t) => ph('<em>' + parseInline(t, placeholders) + '</em>'));
+
+    // 7. 删除线 ~~text~~
+    text = text.replace(/~~([^~]+)~~/g, (m, t) => ph('<del>' + parseInline(t, placeholders) + '</del>'));
+
+    // 8. 自动链接 <url>
+    text = text.replace(/<([a-zA-Z][a-zA-Z0-9+.-]*:[^>]+)>/g, (m, url) => {
+      const safeUrl = sanitizeUrl(url);
+      return safeUrl ? ph(`<a href="${escAttr(safeUrl)}" rel="noopener noreferrer" target="_blank">${esc(safeUrl)}</a>`) : ph(esc(m));
+    });
+
+    // 9. 转义字符 \_ \* \[ \] \( \) \# \` \~ \{ \} \| \\ \. \!
+    text = text.replace(/\\([_*\[\]()#`~|\\.!])/g, (m, ch) => ph(esc(ch)));
+
+    // 10. 剩余文本 HTML 转义
+    text = esc(text);
+
+    // 11. 恢复占位符
+    return text.replace(/\x00(\d+)\x00/g, (m, idx) => placeholders[parseInt(idx)]);
   }
 
-  const parseInline = (s) => {
-    if (!s) return '';
-    return s
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      .replace(/~~([^~]+)~~/g, '<del>$1</del>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, text, url) => {
-        const safeUrl = sanitizeUrl(url);
-        if (safeUrl == null) return escAttr(text); // 危险链接仅保留纯文本
-        // 外部链接增加 rel="noopener noreferrer"
-        const isExternal = /^https?:/i.test(safeUrl);
-        const rel = isExternal ? ' rel="noopener noreferrer" target="_blank"' : '';
-        return `<a href="${escAttr(safeUrl)}"${rel}>${text}</a>`;
-      });
-  };
-
-  const parse = (src) => {
+  // ---- 块级解析 ----
+  function parse(src) {
     const lines = src.replace(/\r\n?/g, '\n').split('\n');
-    let i = 0, out = [], pbuf = [];
+    let i = 0;
+    const out = [];
 
-    const flushP = () => {
-      if (pbuf.length) {
-        // 处理硬换行：不在转义前插入 HTML 字符串，而是分段后分别内联解析再用 <br> 连接
-        const lines = pbuf.join('\n').split('\n');
-        const htmlParts = [];
-        for (let li = 0; li < lines.length; li++) {
-          const line = lines[li];
-          // 检测硬换行标记（行尾双空格）
-          const isHardBreak = /  $/.test(line);
-          const text = isHardBreak ? line.slice(0, -2) : line;
-          htmlParts.push(parseInline(text.trim()));
-          if (isHardBreak && li < lines.length - 1) {
-            htmlParts.push('<br>');
-          }
-        }
-        out.push('<p>' + htmlParts.join('') + '</p>');
-        pbuf = [];
+    const peek = offset => lines[i + offset] || '';
+    const rest = () => lines.slice(i);
+
+    // -- 围栏代码块 --
+    function parseFence() {
+      const m = lines[i].match(/^(`{3,}|~{3,})(.*)$/);
+      if (!m) return false;
+      const fence = m[1][0];
+      const fenceLen = m[1].length;
+      const info = (m[2] || '').trim();
+      const code = [];
+      i++;
+      while (i < lines.length) {
+        const line = lines[i];
+        const lm = line.match(/^(`{3,}|~{3,})/);
+        // 闭合围栏：相同字符、长度 >= 开头、整行只有围栏字符（可有空白）
+        if (lm && lm[1][0] === fence && lm[1].length >= fenceLen && line.trim().length === lm[1].length) break;
+        code.push(line);
+        i++;
       }
-    };
+      i++; // skip closing fence
+      const lang = info ? ` class="lang-${escAttr(info.split(/\s+/)[0])}"` : '';
+      out.push('<pre><code' + lang + '>' + esc(code.join('\n')) + '</code></pre>');
+      return true;
+    }
 
-    // 分割表格行：支持转义管道符 \|，且不在行内代码中的管道符处分列
-    const splitRow = (r) => {
-      const trimmed = r.replace(/^\||\s*\|\s*$/, '');
+    // -- ATX 标题 --
+    function parseATX() {
+      const m = lines[i].match(/^(#{1,6})(?:\s+|\s*$)(.*?)(?:\s+#*)?\s*$/);
+      if (!m) return false;
+      const level = m[1].length;
+      const text = m[2].trim();
+      out.push(`<h${level}>${parseInline(text)}</h${level}>`);
+      i++;
+      return true;
+    }
+
+    // -- Setext 标题 --
+    function parseSetext() {
+      if (i + 1 >= lines.length) return false;
+      const t = lines[i].trim();
+      if (!t || /^#{1,6}\s/.test(t) || /^[-=]{2,}\s*$/.test(t)) return false;
+      const next = lines[i + 1].trim();
+      if (/^={2,}\s*$/.test(next)) { out.push(`<h1>${parseInline(t)}</h1>`); i += 2; return true; }
+      if (/^-{2,}\s*$/.test(next)) { out.push(`<h2>${parseInline(t)}</h2>`); i += 2; return true; }
+      return false;
+    }
+
+    // -- 水平线 --
+    function parseHR() {
+      if (/^(\*{3,}|-{3,}|_{3,})\s*$/.test(lines[i].trim())) { out.push('<hr>'); i++; return true; }
+      return false;
+    }
+
+    // -- 块引用 --
+    function parseBlockquote() {
+      if (!lines[i].trim().startsWith('>')) return false;
+      const bqLines = [];
+      while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (trimmed === '>') { bqLines.push(''); i++; continue; }
+        if (trimmed.startsWith('>')) { bqLines.push(trimmed.replace(/^>\s?/, '')); i++; continue; }
+        // 懒惰延续：如果下一行是段落延续（非空且非其他块级元素）
+        if (line && line.trim() && !isBlockStart(line) && bqLines.length) {
+          bqLines.push(line.trim());
+          i++;
+          continue;
+        }
+        break;
+      }
+      out.push('<blockquote>' + parse(bqLines.join('\n')) + '</blockquote>');
+      return true;
+    }
+
+    // -- 列表（含嵌套） --
+    function parseList() {
+      const m = lines[i].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+      if (!m) return false;
+      const startIndent = m[1].length;
+      const items = [];
+
+      while (i < lines.length) {
+        const line = lines[i];
+        const lm = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+        if (!lm) {
+          // 懒惰延续或子内容
+          if (line.trim() && !isBlockStart(line) && items.length) {
+            items[items.length - 1].content.push(line);
+            i++;
+            continue;
+          }
+          break;
+        }
+        const indent = lm[1].length;
+        if (indent < startIndent) break; // 缩进减少，退出列表
+        if (indent > startIndent) {
+          // 嵌套：回退一行，让递归处理
+          if (items.length) {
+            items[items.length - 1].content.push(line);
+            i++;
+            continue;
+          }
+          break;
+        }
+        // 同级列表项
+        const marker = lm[2];
+        const content = lm[3];
+        // 任务列表检测
+        const taskM = content.match(/^\[([ xX])\]\s+(.*)$/);
+        const chk = taskM ? taskM[1].toLowerCase() === 'x' : null;
+        const txt = taskM ? taskM[2] : content;
+        items.push({ marker, chk, content: [txt], task: taskM !== null });
+        i++;
+      }
+
+      // 渲染列表
+      const firstMarker = items[0].marker;
+      const isOrdered = /^\d/.test(firstMarker);
+      const hasTask = items.some(it => it.task);
+      const tag = isOrdered ? 'ol' : 'ul';
+
+      const renderItem = item => {
+        // 递归解析列表项内容（支持嵌套列表、段落等）)
+        const inner = parse(item.content.join('\n'));
+        if (item.task) {
+          return '<li class="task-list-item">' +
+            '<input type="checkbox" disabled' + (item.chk ? ' checked' : '') + '> ' +
+            inner.replace(/^<p>/, '').replace(/<\/p>$/, '') + '</li>';
+        }
+        return '<li>' + inner.replace(/^<p>/, '').replace(/<\/p>$/, '') + '</li>';
+      };
+
+      out.push('<' + tag + (hasTask ? ' class="task-list"' : '') + '>' + items.map(renderItem).join('') + '</' + tag + '>');
+      return true;
+    }
+
+    // -- 表格（GFM 含对齐） --
+    function parseTable() {
+      const line = lines[i].trim();
+      if (!line.startsWith('|') || !line.endsWith('|')) return false;
+      if (i + 1 >= lines.length) return false;
+      const hdrCells = splitTableRow(line);
+      const sepLine = lines[i + 1].trim();
+      const sepCells = splitTableRow(sepLine);
+      // 验证分隔行格式
+      if (!sepCells.every(c => /^:?-+:?$/.test(c.trim()))) return false;
+      if (sepCells.length !== hdrCells.length) return false;
+
+      const aligns = sepCells.map(c => {
+        const t = c.trim();
+        if (t.startsWith(':') && t.endsWith(':')) return 'center';
+        if (t.endsWith(':')) return 'right';
+        return '';
+      });
+
+      const hdrHtml = hdrCells.map((c, i) => {
+        const a = aligns[i] ? ` style="text-align:${aligns[i]}"` : '';
+        return '<th' + a + '>' + parseInline(c.trim()) + '</th>';
+      }).join('');
+
+      let r = i + 2;
+      const rows = [];
+      while (r < lines.length) {
+        const rowLine = lines[r].trim();
+        if (!rowLine.startsWith('|') || !rowLine.endsWith('|')) break;
+        const cells = splitTableRow(rowLine);
+        // 补齐/截断列数
+        while (cells.length < hdrCells.length) cells.push('');
+        if (cells.length > hdrCells.length) cells.length = hdrCells.length;
+        rows.push(cells);
+        r++;
+      }
+
+      const rowsHtml = rows.map(cells =>
+        '<tr>' + cells.map((c, idx) => {
+          const a = aligns[idx] ? ` style="text-align:${aligns[idx]}"` : '';
+          return '<td' + a + '>' + (c.trim() ? parseInline(c.trim()) : '') + '</td>';
+        }).join('') + '</tr>'
+      ).join('');
+
+      out.push('<table><thead><tr>' + hdrHtml + '</tr></thead><tbody>' + rowsHtml + '</tbody></table>');
+      i = r;
+      return true;
+    }
+
+    // -- 分割表格行（支持转义管道符） --
+    function splitTableRow(row) {
+      const trimmed = row.replace(/^\s*\|\s*/, '').replace(/\s*\|\s*$/, '');
       const cells = [];
       let cur = '', inCode = false;
-      for (let i = 0; i < trimmed.length; i++) {
-        const ch = trimmed[i];
-        if (ch === '`') {
-          inCode = !inCode;
-          cur += ch;
-        } else if (ch === '\\' && trimmed[i + 1] === '|') {
-          cur += '|'; i++; // 转义管道符 → 保留字面量 |
-        } else if (ch === '|' && !inCode) {
-          cells.push(cur.trim());
-          cur = '';
-        } else {
-          cur += ch;
-        }
+      for (let j = 0; j < trimmed.length; j++) {
+        const ch = trimmed[j];
+        if (ch === '`') { inCode = !inCode; cur += ch; }
+        else if (ch === '\\' && trimmed[j + 1] === '|') { cur += '|'; j++; }
+        else if (ch === '|' && !inCode) { cells.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
       }
       cells.push(cur.trim());
       return cells;
-    };
-    let tbuf = [];
-    const flushT = () => {
-      if (tbuf.length < 2) { tbuf.forEach(l => out.push('<p>' + parseInline(l) + '</p>')); tbuf = []; return; }
-      const hdr = splitRow(tbuf[0]);
-      const aln = splitRow(tbuf[1]);
-      const ok = aln.length && aln.every(c => /^:?-+:?$/.test(c.trim()));
-      const colCount = hdr.length;
-      let h = '<table><thead><tr>';
-      hdr.forEach(c => h += '<th>' + parseInline(c.trim()) + '</th>');
-      h += '</tr></thead><tbody>';
-      for (let r = ok ? 2 : 1; r < tbuf.length; r++) {
-        let cells = splitRow(tbuf[r]);
-        // 列数不一致时合理补齐或截断
-        if (cells.length < colCount) {
-          while (cells.length < colCount) cells.push('');
-        } else if (cells.length > colCount) {
-          cells = cells.slice(0, colCount);
-        }
-        h += '<tr>' + cells.map(c => '<td>' + (c ? parseInline(c) : '') + '</td>').join('') + '</tr>';
-      }
-      h += '</tbody></table>';
-      out.push(h);
-      tbuf = [];
-    };
+    }
 
+    // -- 缩进代码块 --
+    function parseIndentedCode() {
+      if (!lines[i].startsWith('    ') || lines[i].trim() === '') return false;
+      const code = [];
+      while (i < lines.length && (lines[i].startsWith('    ') || lines[i].trim() === '')) {
+        code.push(lines[i].startsWith('    ') ? lines[i].slice(4) : '');
+        i++;
+      }
+      out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>');
+      return true;
+    }
+
+    // -- 判断某行是否是块级元素开始 --
+    function isBlockStart(line) {
+      const t = line.trim();
+      if (!t) return true;
+      if (/^(```|~~~)/.test(t)) return true;
+      if (/^#{1,6}\s/.test(t)) return true;
+      if (/^(\*{3,}|-{3,}|_{3,})\s*$/.test(t)) return true;
+      if (t.startsWith('>')) return true;
+      if (/^(\s*)([-*+]|\d+[.)])\s+/.test(line)) return true;
+      if (t.startsWith('|') && t.endsWith('|')) return true;
+      return false;
+    }
+
+    // -- 段落（收集连续非空行，处理硬换行） --
+    function parseParagraph() {
+      const pLines = [];
+      while (i < lines.length) {
+        const line = lines[i];
+        if (line.trim() === '') break;
+        if (isBlockStart(line) && pLines.length) break;
+        pLines.push(line);
+        i++;
+      }
+      if (!pLines.length) return false;
+
+      // 段落内：软换行用空格连接，硬换行（行尾双空格或 \）生成 <br>
+      const segments = [];
+      let current = '';
+      for (let k = 0; k < pLines.length; k++) {
+        const pl = pLines[k];
+        const isLast = k === pLines.length - 1;
+        const hardBreak = !isLast && (/ {2,}$/.test(pl) || /\\$/.test(pl));
+        const text = hardBreak ? pl.replace(/(\\{1,}| {2,})$/, '') : pl;
+        if (hardBreak) {
+          current += text;
+          segments.push(current);
+          current = '';
+        } else if (!isLast) {
+          current += text + ' ';
+        } else {
+          current += text;
+        }
+      }
+      if (current) segments.push(current);
+
+      const html = segments.map(s => parseInline(s)).join('<br>\n');
+      out.push('<p>' + html + '</p>');
+      return true;
+    }
+
+    // -- 主循环 --
     while (i < lines.length) {
       const line = lines[i];
-      const t = line.trim();
+      if (line.trim() === '') { i++; continue; }
 
-      // 代码块
-      if (/^(```|~~~)/.test(t)) {
-        flushP(); flushT();
-        const sym = t.slice(0, 3);
-        const code = [];
-        i++;
-        while (i < lines.length && !lines[i].trim().startsWith(sym)) { code.push(lines[i]); i++; }
-        i++;
-        out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>');
-        continue;
-      }
+      if (parseFence()) continue;
+      if (parseATX()) continue;
+      if (parseSetext()) continue;
+      if (parseHR()) continue;
+      if (parseBlockquote()) continue;
+      if (parseList()) continue;
+      if (parseTable()) continue;
+      if (parseIndentedCode()) continue;
+      if (parseParagraph()) continue;
 
-      // 标题
-      const hx = t.match(/^(#{1,6})\s+(.+)$/);
-      if (hx) { flushP(); flushT(); out.push(`<h${hx[1].length}>${parseInline(hx[2])}</h${hx[1].length}>`); i++; continue; }
-
-      // 水平线
-      if (/^(\*{3,}|-{3,}|_{3,})$/.test(t)) { flushP(); flushT(); out.push('<hr>'); i++; continue; }
-
-      // 引用
-      if (t.startsWith('>')) {
-        flushP(); flushT();
-        const bq = [];
-        while (i < lines.length && lines[i].trim().startsWith('>')) { bq.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
-        out.push('<blockquote>' + parse(bq.join('\n')).replace(/<\/?p>/g, '') + '</blockquote>');
-        continue;
-      }
-
-      // 表格
-      if (t.startsWith('|') && t.endsWith('|')) { flushP(); tbuf.push(t); i++; continue; }
-
-      // 列表（使用标记符号判断类型，B6）
-      const taskMatch = t.match(/^(\s*)([-*+])\s+\[([ xX])\]\s+(.+)$/);
-      const listMatch = t.match(/^(\s*)([-*+]|\d+\.)\s+(.+)$/);
-      if (taskMatch || listMatch) {
-        flushP(); flushT();
-        const items = [];
-        const isTask = !!taskMatch;
-        const re = isTask ? /^(\s*)([-*+])\s+\[([ xX])\]\s+(.+)$/ : /^(\s*)([-*+]|\d+\.)\s+(.+)$/;
-        while (i < lines.length) {
-          const m = lines[i].match(re);
-          if (!m) break;
-          items.push({ chk: isTask ? m[3].toLowerCase() === 'x' : null, txt: m[4], marker: m[2] });
-          i++;
-        }
-        const isOrdered = /^\d/.test(items[0].marker);
-        const tag = isOrdered ? 'ol' : 'ul';
-        if (items.some(it => it.chk !== null)) {
-          out.push(`<${tag}>` + items.map(it => `<li>${it.chk ? '✓ ' : '○ '}${parseInline(it.txt)}</li>`).join('') + `</${tag}>`);
-        } else {
-          out.push(`<${tag}>` + items.map(it => `<li>${parseInline(it.txt)}</li>`).join('') + `</${tag}>`);
-        }
-        continue;
-      }
-
-      if (t === '') { flushP(); flushT(); i++; continue; }
-      pbuf.push(line);
+      // 兜底：跳过无法识别的行
       i++;
     }
-    flushP(); flushT();
+
     return out.join('\n');
-  };
+  }
 
   // 提取某个标题下的内容
   const extractSection = (text, re) => {
@@ -2026,7 +2197,10 @@ const GraphEngine = (() => {
     draw();
   };
 
-  return { init, start, pause, resume, destroy, redraw, selectNode, hitTest };
+  // 公开 resize 方法，供标签切换时重新计算 canvas 尺寸
+  const triggerResize = () => { if (canvas && ctx) resize(); };
+
+  return { init, start, pause, resume, destroy, redraw, selectNode, hitTest, triggerResize };
 })();
 
 /* ---------- Characters 组件（人物关系） ---------- */
@@ -2036,8 +2210,13 @@ const Characters = {
   _filterTier: 'all',
 
   onEnter() {
-    if (Store.state.dataVersion !== this._lastVersion) this.render();
-    else GraphEngine.resume();
+    if (Store.state.dataVersion !== this._lastVersion) {
+      this.render();
+    } else {
+      // 从其他标签切回时，canvas 尺寸可能因 display:none 而为 0，需重新计算
+      GraphEngine.triggerResize();
+      GraphEngine.resume();
+    }
   },
 
   onLeave() {
@@ -2068,17 +2247,24 @@ const Characters = {
         </select>
       </div>
       <div class="section-title">关系图</div>
-      <div class="graphwrap card" style="padding:10px;margin-bottom:20px;">
-        <div class="gfx"><canvas id="graph"></canvas></div>
-        <aside class="info" id="graphInfo">
-          <div class="empty-state">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>
-        </aside>
+      <div class="graph-layout">
+        <div class="graph-canvas-wrap">
+          <canvas id="graph"></canvas>
+        </div>
+        <div class="graph-sidebar">
+          <div class="card" id="graphInfo">
+            <div class="empty-state">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>
+          </div>
+        </div>
       </div>
       <div class="section-title">角色列表</div>
       <div class="char-list" id="charList"></div>
     `;
 
-    GraphEngine.init(document.getElementById('graph'), graph);
+    // 延迟到下一帧初始化，确保面板可见且布局完成，canvas 有正确尺寸
+    requestAnimationFrame(() => {
+      GraphEngine.init(document.getElementById('graph'), graph);
+    });
     this._renderCharList(graph.nodes);
     this._renderGraphTextAlt(graph);
 
