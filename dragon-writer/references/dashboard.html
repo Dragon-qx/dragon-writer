@@ -320,6 +320,66 @@ const Utils = (() => {
   return { escHtml, fmtNum, countWords, statusLabel, truncate, fmtDate, timeAgo, theme, shortcuts };
 })();
 
+/* ---------- Store 中央状态管理模块 ---------- */
+const Store = (() => {
+  const state = {
+    book: null,
+    chapters: [],
+    roles: [],
+    files: {},
+    settings: {},
+    graph: { nodes: [], edges: [] },
+    loading: false,
+    error: null,
+    tabLoading: {},
+  };
+
+  const listeners = new Map();
+
+  const get = (path) => {
+    if (!path) return state;
+    return path.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, state);
+  };
+
+  const set = (path, val) => {
+    const keys = path.split('.');
+    const lastKey = keys.pop();
+    const target = keys.reduce((o, k) => {
+      if (o[k] === undefined) o[k] = {};
+      return o[k];
+    }, state);
+    target[lastKey] = val;
+    // 通知所有订阅者
+    listeners.forEach((fns, component) => {
+      fns.forEach(fn => { try { fn(path, val); } catch {} });
+    });
+  };
+
+  const on = (component, fn) => {
+    if (!listeners.has(component)) listeners.set(component, new Set());
+    listeners.get(component).add(fn);
+  };
+
+  const off = (component, fn) => {
+    const s = listeners.get(component);
+    if (s) { s.delete(fn); if (s.size === 0) listeners.delete(component); }
+  };
+
+  const reset = () => {
+    state.book = null;
+    state.chapters = [];
+    state.roles = [];
+    state.files = {};
+    state.settings = {};
+    state.graph = { nodes: [], edges: [] };
+    state.loading = false;
+    state.error = null;
+    state.tabLoading = {};
+  };
+
+  return { state, get, set, on, off, reset };
+})();
+
 /* ---------- 轻量 Markdown 解析器 ---------- */
 const MD = (() => {
   const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
