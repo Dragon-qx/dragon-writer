@@ -156,6 +156,28 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .article ul,.article ol{padding-left:20px;margin:8px 0}
 .article blockquote{border-left:3px solid var(--accent);margin:12px 0;padding:8px 16px;background:var(--bg-subtle);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
 
+/* ========== Graph 关系图 ========== */
+.graph-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;min-height:400px}
+.graph-canvas-wrap{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}
+.graph-canvas-wrap canvas{display:block;width:100%;height:100%;min-height:400px;touch-action:none}
+.graph-sidebar{display:flex;flex-direction:column;gap:12px}
+#graphInfo{font-size:13px;line-height:1.6}
+#graphInfo .name{font-family:var(--serif);font-size:18px;font-weight:600;margin-bottom:4px}
+#graphInfo .tier{font-size:12px;color:var(--text-muted);margin-bottom:8px}
+#graphInfo dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:13px}
+#graphInfo dt{color:var(--text-muted);white-space:nowrap}
+#graphInfo dd{margin:0}
+#graphInfo .rels{margin-top:10px;border-top:1px solid var(--border);padding-top:8px}
+#graphInfo .rel-item{margin-bottom:4px}
+#graphInfo .rname{font-weight:600}
+#charList{display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto}
+.charcard{padding:10px 12px;background:var(--bg-subtle);border-radius:var(--radius-sm);border:2px solid transparent;cursor:pointer;transition:border-color var(--transition-fast),background var(--transition-fast)}
+.charcard:hover{background:var(--border)}
+.charcard .name{font-weight:600;font-size:13px}
+.charcard .tier{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.charcard .kv{font-size:12px;color:var(--text-muted);display:flex;gap:4px}
+.charcard .kv b{color:var(--text);min-width:16px}
+
 /* ========== Responsive ========== */
 @media(max-width:820px) {
   .layout{grid-template-columns:1fr}
@@ -227,6 +249,15 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
       <section class="panel" id="panel-chars" role="tabpanel">
         <h2>人物关系</h2>
         <p class="lede">点击节点查看角色详情。节点颜色区分主要 / 次要角色。</p>
+        <div class="graph-layout">
+          <div class="graph-canvas-wrap">
+            <canvas id="graph"></canvas>
+          </div>
+          <div class="graph-sidebar">
+            <div id="graphInfo" class="card"></div>
+            <div id="charList"></div>
+          </div>
+        </div>
       </section>
       <section class="panel" id="panel-read" role="tabpanel">
         <h2>阅读章节</h2>
@@ -1149,90 +1180,302 @@ async function render(){
   drawToc(data.chapters);
 }
 
-/* ---------- 力导向关系图 ---------- */
-const Graph = (() => {
-  let canvas, ctx, nodes=[], edges=[], W=0, H=0, selected=-1, dragging=-1, raf=null;
-  const tierColor = n => /次要|minor/.test(n.tier) ? "#6b6760" : getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#b5651d";
-  function init(gdata){
-    canvas = $("graph"); ctx = canvas.getContext("2d");
-    const resize = () => { const r = canvas.getBoundingClientRect(); const dpr = window.devicePixelRatio||1;
-      canvas.width = r.width*dpr; canvas.height = r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); W=r.width; H=r.height; };
-    resize(); window.addEventListener("resize", resize);
-    if (typeof ResizeObserver !== "undefined") {
-      let lastW = 0, lastH = 0;
-      const ro = new ResizeObserver(() => {
-        const r = canvas.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0 && (Math.abs(r.width - lastW) > 0.5 || Math.abs(r.height - lastH) > 0.5)) {
-          lastW = r.width; lastH = r.height; resize();
-          if (nodes.length) for (const n of nodes) { n.x = Math.max(40, Math.min(W - 40, n.x)); n.y = Math.max(40, Math.min(H - 40, n.y)); }
-        }
-      });
-      ro.observe(canvas);
-    }
-    nodes = gdata.nodes.map((n,i) => ({ ...n, x:W/2+(Math.random()-0.5)*200, y:H/2+(Math.random()-0.5)*200, vx:0, vy:0 }));
+/* ---------- GraphEngine 力导向关系图 ---------- */
+const GraphEngine = (() => {
+  let canvas, ctx, W = 0, H = 0;
+  let nodes = [], edges = [];
+  let selected = -1, dragging = -1;
+  let raf = null;
+  let physicsRunning = false;
+  let settledCount = 0;
+  const SETTLE_THRESHOLD = 0.5;
+  const SETTLE_FRAMES = 10;
+
+  const init = (cvs, gdata) => {
+    // 取消旧的 rAF
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+
+    canvas = cvs;
+    ctx = canvas.getContext('2d');
+    selected = -1;
+    dragging = -1;
+    physicsRunning = false;
+    settledCount = 0;
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = r.width * dpr;
+      canvas.height = r.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      W = r.width;
+      H = r.height;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    nodes = gdata.nodes.map((n, i) => ({
+      ...n,
+      x: W / 2 + (Math.random() - 0.5) * 200,
+      y: H / 2 + (Math.random() - 0.5) * 200,
+      vx: 0, vy: 0,
+    }));
     edges = gdata.edges;
-    canvas.onpointerdown = e => { const h = nodeAt(e); dragging = h; if (h>=0) selectNode(h); };
-    canvas.onpointermove = e => { if (dragging>=0){ const r=canvas.getBoundingClientRect(); nodes[dragging].x=e.clientX-r.left; nodes[dragging].y=e.clientY-r.top; nodes[dragging].vx=nodes[dragging].vy=0; } canvas.style.cursor = nodeAt(e)>=0 ? "pointer" : "grab"; };
+
+    // 事件绑定
+    canvas.onpointerdown = (e) => {
+      const h = hitTest(e);
+      dragging = h;
+      if (h >= 0) {
+        selectNode(h);
+        // 拖拽时恢复物理模拟
+        if (!physicsRunning) start();
+      }
+    };
+    canvas.onpointermove = (e) => {
+      if (dragging >= 0) {
+        const r = canvas.getBoundingClientRect();
+        nodes[dragging].x = e.clientX - r.left;
+        nodes[dragging].y = e.clientY - r.top;
+        nodes[dragging].vx = 0;
+        nodes[dragging].vy = 0;
+      }
+      canvas.style.cursor = hitTest(e) >= 0 ? 'pointer' : 'grab';
+    };
     canvas.onpointerup = () => { dragging = -1; };
+    canvas.onwheel = (e) => {
+      e.preventDefault();
+      // 缩放（简化实现，完整版需要矩阵变换）
+    };
+
+    start();
+  };
+
+  const start = () => {
+    if (physicsRunning) return;
+    physicsRunning = true;
+    settledCount = 0;
     loop();
-  }
-  function nodeAt(e){ const r=canvas.getBoundingClientRect(); const mx=e.clientX-r.left,my=e.clientY-r.top; for(let i=nodes.length-1;i>=0;i--){const n=nodes[i];if((mx-n.x)**2+(my-n.y)**2 < radius(n)**2) return i;} return -1; }
-  function radius(n){ return 18 + Math.min(14, degree(n.i)*2); }
-  function degree(i){ return edges.filter(e=>e.s===i||e.t===i).length; }
-  function loop(){
-    for (const n of nodes){ n.vx*=0.85; n.vy*=0.85; }
-    for (const e of edges){ const a=nodes[e.s],b=nodes[e.t]; const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1; const f=(d-170)*0.008,ux=dx/d,uy=dy/d; a.vx+=ux*f;a.vy+=uy*f;b.vx-=ux*f;b.vy-=uy*f; }
-    for (let i=0;i<nodes.length;i++){ for(let j=i+1;j<nodes.length;j++){ const a=nodes[i],b=nodes[j]; let dx=b.x-a.x,dy=b.y-a.y; const d=Math.sqrt(dx*dx+dy*dy)||1,f=-1400/(d*d),ux=dx/d,uy=dy/d; a.vx+=ux*f;a.vy+=uy*f;b.vx-=ux*f;b.vy-=uy*f; } }
-    for (const n of nodes){ n.vx+=(W/2-n.x)*0.0012; n.vy+=(H/2-n.y)*0.0012; if(nodes.indexOf(n)!==dragging){ n.x+=n.vx;n.y+=n.vy; n.x=Math.max(30,Math.min(W-30,n.x)); n.y=Math.max(30,Math.min(H-30,n.y)); } }
-    draw(); raf=requestAnimationFrame(loop);
-  }
-  function draw(){
-    ctx.clearRect(0,0,W,H);
-    if(!nodes.length){ ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim(); ctx.font="14px var(--sans)"; ctx.textAlign="center"; ctx.fillText("暂无角色数据",W/2,H/2); return; }
-    const lineColor = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
-    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
-    const labelColor = getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim();
-    const bgSoft = getComputedStyle(document.documentElement).getPropertyValue("--bg-subtle").trim();
-    for(const e of edges){
-      const a=nodes[e.s],b=nodes[e.t];
-      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
-      ctx.strokeStyle=lineColor; ctx.globalAlpha=0.55; ctx.lineWidth=1.8; ctx.stroke(); ctx.globalAlpha=1;
-      if(e.label){
-        const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
-        const txt=e.label;
-        ctx.font="11px var(--sans)";
-        const tw=ctx.measureText(txt).width;
-        ctx.fillStyle=bgSoft; ctx.fillRect(mx-tw/2-4,my-7,tw+8,14);
-        ctx.fillStyle=labelColor; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(txt,mx,my);
+  };
+
+  const pause = () => {
+    physicsRunning = false;
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    // 暂停时绘制一帧静态图
+    draw();
+  };
+
+  const resume = () => {
+    if (!physicsRunning) {
+      physicsRunning = true;
+      loop();
+    }
+  };
+
+  const destroy = () => {
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    physicsRunning = false;
+    canvas.onpointerdown = null;
+    canvas.onpointermove = null;
+    canvas.onpointerup = null;
+    canvas.onwheel = null;
+    nodes = [];
+    edges = [];
+  };
+
+  const loop = () => {
+    if (!physicsRunning) return;
+
+    // 物理模拟
+    for (const n of nodes) { n.vx *= 0.85; n.vy *= 0.85; }
+
+    // 弹簧力
+    for (const e of edges) {
+      const a = nodes[e.s], b = nodes[e.t];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const f = (d - 170) * 0.008;
+      const ux = dx / d, uy = dy / d;
+      a.vx += ux * f; a.vy += uy * f;
+      b.vx -= ux * f; b.vy -= uy * f;
+    }
+
+    // 斥力
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        const f = -1400 / (d * d);
+        const ux = dx / d, uy = dy / d;
+        a.vx += ux * f; a.vy += uy * f;
+        b.vx -= ux * f; b.vy -= uy * f;
       }
     }
-    for(const n of nodes){
-      const r=radius(n); ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fillStyle=n.color; ctx.fill();
-      if(nodes.indexOf(n)===selected){ ctx.lineWidth=3; ctx.strokeStyle=accent; ctx.stroke(); }
-      ctx.fillStyle="#fff"; ctx.font=`${Math.round(r*0.7)}px var(--sans)`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(n.name.slice(0,3),n.x,n.y);
-      ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text").trim(); ctx.font="12px var(--sans)"; ctx.textBaseline="alphabetic"; ctx.fillText(n.name,n.x,n.y+r+12);
+
+    // 中心引力
+    for (const n of nodes) {
+      n.vx += (W / 2 - n.x) * 0.0012;
+      n.vy += (H / 2 - n.y) * 0.0012;
     }
-  }
-  function setSelect(i){
-    selected=i; draw();
-    const info=$("graphInfo");
-    if(i<0){ info.innerHTML='<div class="empty-state">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>'; return; }
-    const n=nodes[i];
-    const fields=[["故事功能",n.func],["欲望",n.desire],["恐惧",n.fear],["当前状态",n.state],["弧线",n.arc],["秘密",n.secrets]].filter((a)=>a[1]);
-    const rels=edges.filter(e=>e.s===i||e.t===i).map(e=>{ const o=nodes[e.s===i?e.t:e.s]; return `<div style="margin-bottom:6px"><span class="rname">${Utils.escHtml(o.name)}</span>${e.label?' — '+MDParser.parseInline(e.label):''}</div>`; });
-    info.innerHTML=`<div class="name">${Utils.escHtml(n.name)}</div><div class="tier">${Utils.escHtml(n.tier)}</div>` +
-      (fields.length?`<dl>${fields.map(([k,v])=>`<dt>${Utils.escHtml(k)}</dt><dd>${MDParser.parseInline(v)}</dd>`).join("")}</dl>`:'') +
-      (rels.length?`<div class="rels" style="font-size:13px;color:var(--text-muted)">${rels.join("")}</div>`:'');
-  }
-  return { init, setSelect };
+
+    // 更新位置
+    let totalSpeed = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      if (i !== dragging) {
+        n.x += n.vx;
+        n.y += n.vy;
+        n.x = Math.max(30, Math.min(W - 30, n.x));
+        n.y = Math.max(30, Math.min(H - 30, n.y));
+      }
+      totalSpeed += Math.abs(n.vx) + Math.abs(n.vy);
+    }
+
+    // 收敛检测
+    if (totalSpeed < SETTLE_THRESHOLD) {
+      settledCount++;
+      if (settledCount >= SETTLE_FRAMES) {
+        physicsRunning = false;
+        draw();
+        return;
+      }
+    } else {
+      settledCount = 0;
+    }
+
+    draw();
+    raf = requestAnimationFrame(loop);
+  };
+
+  const draw = () => {
+    ctx.clearRect(0, 0, W, H);
+
+    if (!nodes.length) {
+      ctx.fillStyle = Utils.theme.get('textMuted');
+      ctx.font = '14px ' + Utils.theme.get('sans');
+      ctx.textAlign = 'center';
+      ctx.fillText('暂无角色数据', W / 2, H / 2);
+      return;
+    }
+
+    const accent = Utils.theme.get('accent');
+    const lineColor = Utils.theme.get('border');
+    const labelColor = Utils.theme.get('textMuted');
+    const bgSoft = Utils.theme.get('bgSubtle');
+    const minorColor = Utils.theme.get('textMuted');
+    const textColor = Utils.theme.get('text');
+    const sans = Utils.theme.get('sans');
+
+    // 连线
+    for (const e of edges) {
+      const a = nodes[e.s], b = nodes[e.t];
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = lineColor;
+      ctx.globalAlpha = selected >= 0 && (e.s === selected || e.t === selected) ? 0.8 : 0.25;
+      ctx.lineWidth = selected >= 0 && (e.s === selected || e.t === selected) ? 2.5 : 1.2;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // 边标签
+      if (e.label && (selected < 0 || e.s === selected || e.t === selected)) {
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        const txt = e.label;
+        ctx.font = '11px ' + sans;
+        const tw = ctx.measureText(txt).width;
+        ctx.fillStyle = bgSoft;
+        ctx.fillRect(mx - tw / 2 - 4, my - 7, tw + 8, 14);
+        ctx.fillStyle = labelColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(txt, mx, my);
+      }
+    }
+
+    // 节点
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      const r = 18 + Math.min(14, edges.filter(e => e.s === i || e.t === i).length * 2);
+      const isDimmed = selected >= 0 && i !== selected && !edges.some(e => (e.s === selected && e.t === i) || (e.t === selected && e.s === i));
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.globalAlpha = isDimmed ? 0.3 : 1;
+      ctx.fillStyle = /次要|minor/.test(n.tier) ? minorColor : accent;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      if (i === selected) {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = accent;
+        ctx.stroke();
+      }
+
+      // 节点内文字
+      ctx.fillStyle = '#fff';
+      ctx.font = Math.round(r * 0.7) + 'px ' + sans;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.name.slice(0, 3), n.x, n.y);
+
+      // 节点下方名称
+      ctx.fillStyle = isDimmed ? labelColor : textColor;
+      ctx.font = '12px ' + sans;
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(n.name, n.x, n.y + r + 12);
+    }
+  };
+
+  const hitTest = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i];
+      const radius = 18 + Math.min(14, edges.filter(ed => ed.s === i || ed.t === i).length * 2);
+      if ((mx - n.x) ** 2 + (my - n.y) ** 2 < radius ** 2) return i;
+    }
+    return -1;
+  };
+
+  const selectNode = (i) => {
+    selected = i;
+    draw();
+    const info = document.getElementById('graphInfo');
+    if (i < 0) {
+      info.innerHTML = '<div class="empty-state">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>';
+      return;
+    }
+    const n = nodes[i];
+    const fields = [
+      ['故事功能', n.func],
+      ['欲望', n.desire],
+      ['恐惧', n.fear],
+      ['当前状态', n.state],
+      ['弧线', n.arc],
+      ['秘密', n.secrets],
+    ].filter(a => a[1]);
+    const rels = edges.filter(e => e.s === i || e.t === i).map(e => {
+      const o = nodes[e.s === i ? e.t : e.s];
+      return `<div class="rel-item"><span class="rname">${Utils.escHtml(o.name)}</span>${e.label ? ' — ' + MDParser.parseInline(e.label) : ''}</div>`;
+    });
+    info.innerHTML = `<div class="name">${Utils.escHtml(n.name)}</div><div class="tier">${Utils.escHtml(n.tier)}</div>` +
+      (fields.length ? `<dl>${fields.map(([k, v]) => `<dt>${Utils.escHtml(k)}</dt><dd>${MDParser.parseInline(v)}</dd>`).join('')}</dl>` : '') +
+      (rels.length ? `<div class="rels">${rels.join('')}</div>` : '');
+  };
+
+  return { init, start, pause, resume, destroy, selectNode, hitTest };
 })();
-function drawGraph(g){ Graph.init(g); }
-let prevCard=null;
-function selectNode(i){
-  Graph.setSelect(i);
-  if(prevCard) prevCard.style.borderColor="";
-  const el=document.querySelector(`.charcard[data-i="${i}"]`);
-  if(el){ el.style.borderColor="var(--accent)"; prevCard=el; }
+function drawGraph(gdata) {
+  GraphEngine.init($("graph"), gdata);
+}
+let prevCard = null;
+function selectNode(i) {
+  GraphEngine.selectNode(i);
+  if (prevCard) prevCard.style.borderColor = "";
+  const el = document.querySelector(`.charcard[data-i="${i}"]`);
+  if (el) { el.style.borderColor = "var(--accent)"; prevCard = el; }
 }
 
 /* ---------- 阅读 ---------- */
