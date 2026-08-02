@@ -380,63 +380,172 @@ const Store = (() => {
   return { state, get, set, on, off, reset };
 })();
 
-/* ---------- 轻量 Markdown 解析器 ---------- */
-const MD = (() => {
-  const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const inline = s => s
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/```[\s\S]*?```/g, m => m)
-    .replace(/`([^`]+)`/g, (_,c) => `<code>${c}</code>`)
-    .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    .replace(/(^|[\s])\/([^\/\s][^\/]*?)\/([^\s.,;:!?]|$)/g, '$1<em>$2</em>$3');
-  function parseInline(s) { return inline(s || ""); }
-  function parse(src) {
-    const lines = src.replace(/\r\n?/g,"\n").split("\n");
-    let i = 0; const out = []; let pbuf = [];
-    const flushP = () => { if (pbuf.length) { out.push("<p>" + pbuf.join(" ").split("  \n").map(s=>inline(s.trim())).join("<br>") + "</p>"); pbuf = []; } };
-    const splitRow = r => r.replace(/^\||\|$/g,"").split("|").map(c => c.trim());
+/* ---------- MDParser Markdown 解析模块 ---------- */
+const MDParser = (() => {
+  const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+
+  const parseInline = (s) => {
+    if (!s) return '';
+    return s
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, text, url) => {
+        // 过滤 javascript: 协议 (B8)
+        const safeUrl = url.replace(/^javascript:/i, '#blocked');
+        return `<a href="${safeUrl}">${text}</a>`;
+      });
+  };
+
+  const parse = (src) => {
+    const lines = src.replace(/\r\n?/g, '\n').split('\n');
+    let i = 0, out = [], pbuf = [];
+
+    const flushP = () => {
+      if (pbuf.length) {
+        // 处理硬换行：双空格 + 换行 → <br> (B5)
+        const text = pbuf.join('\n').replace(/  \n/g, '<br>\n');
+        out.push('<p>' + text.split('\n').map(s => parseInline(s.trim())).join('<br>') + '</p>');
+        pbuf = [];
+      }
+    };
+
+    const splitRow = r => r.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
     let tbuf = [];
     const flushT = () => {
-      if (tbuf.length < 2) { tbuf.forEach(l => out.push("<p>" + inline(l) + "</p>")); tbuf = []; return; }
-      const hdr = splitRow(tbuf[0]); const aln = splitRow(tbuf[1]);
+      if (tbuf.length < 2) { tbuf.forEach(l => out.push('<p>' + parseInline(l) + '</p>')); tbuf = []; return; }
+      const hdr = splitRow(tbuf[0]);
+      const aln = splitRow(tbuf[1]);
       const ok = aln.length && aln.every(c => /^:?-+:?$/.test(c.trim()));
-      let h = "<table><thead><tr>"; hdr.forEach(c => h += "<th>" + inline(c.trim()) + "</th>"); h += "</tr></thead><tbody>";
-      for (let r = ok ? 2 : 1; r < tbuf.length; r++) { const cells = splitRow(tbuf[r]); h += "<tr>"; cells.forEach(c => h += "<td>" + inline(c.trim()) + "</td>"); h += "</tr>"; }
-      h += "</tbody></table>"; out.push(h); tbuf = [];
+      let h = '<table><thead><tr>';
+      hdr.forEach(c => h += '<th>' + parseInline(c.trim()) + '</th>');
+      h += '</tr></thead><tbody>';
+      for (let r = ok ? 2 : 1; r < tbuf.length; r++) {
+        const cells = splitRow(tbuf[r]);
+        h += '<tr>' + cells.map(c => '<td>' + parseInline(c.trim()) + '</td>').join('') + '</tr>';
+      }
+      h += '</tbody></table>';
+      out.push(h);
+      tbuf = [];
     };
+
     while (i < lines.length) {
-      const line = lines[i]; const t = line.trim();
-      if (/^(```|~~~)/.test(t)) { flushP(); flushT();
-        const sym = t.slice(0,3); const code = []; i++;
-        while (i < lines.length && !lines[i].trim().startsWith(sym)) { code.push(lines[i]); i++; } i++;
-        out.push('<pre><code>' + esc(code.join("\n")) + '</code></pre>'); continue; }
-      const hx = t.match(/^(#{1,6})\s+(.+)$/); if (hx) { flushP(); flushT(); out.push(`<h${hx[1].length}>${inline(hx[2])}</h${hx[1].length}>`); i++; continue; }
-      if (/^(\*{3,}|-{3,}|_{3,})$/.test(t)) { flushP(); flushT(); out.push("<hr>"); i++; continue; }
-      if (t.startsWith(">")) { flushP(); flushT();
-        const bq = []; while (i < lines.length && lines[i].trim().startsWith(">")) { bq.push(lines[i].trim().replace(/^>\s?/,"")); i++; }
-        out.push("<blockquote>" + parse(bq.join("\n")).replace(/<\/?p>/g,"") + "</blockquote>"); continue; }
-      if (t.startsWith("|") && t.endsWith("|")) { flushP(); tbuf.push(t); i++; continue; }
-      const task = t.match(/^(\s*)([-*+])\s+\[([ xX])\]\s+(.+)$/); const list = t.match(/^(\s*)([-*+]|\d+\.)\s+(.+)$/);
-      if (task || list) { flushP(); flushT();
-        const items = []; const re = task ? /^(\s*)([-*+])\s+\[([ xX])\]\s+(.+)$/ : /^(\s*)([-*+]|\d+\.)\s+(.+)$/;
-        while (i < lines.length) { const m = lines[i].match(re); if (!m) break;
-          items.push(task ? { chk: m[3].toLowerCase() === "x", txt: m[4] } : { chk: null, txt: m[3] }); i++; }
-        if (items.some(it => it.chk !== null)) { out.push("<ul>" + items.map(it => `<li>${it.chk ? "✓ ":"○ "}${inline(it.txt)}</li>`).join("") + "</ul>"); }
-        else if (/^\d/.test(items[0].txt)) { out.push("<ol>" + items.map(it => `<li>${inline(it.txt)}</li>`).join("") + "</ol>"); }
-        else { out.push("<ul>" + items.map(it => `<li>${inline(it.txt)}</li>`).join("") + "</ul>"); }
+      const line = lines[i];
+      const t = line.trim();
+
+      // 代码块
+      if (/^(```|~~~)/.test(t)) {
+        flushP(); flushT();
+        const sym = t.slice(0, 3);
+        const code = [];
+        i++;
+        while (i < lines.length && !lines[i].trim().startsWith(sym)) { code.push(lines[i]); i++; }
+        i++;
+        out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>');
         continue;
       }
-      if (t === "") { flushP(); flushT(); i++; continue; }
-      pbuf.push(line); i++;
+
+      // 标题
+      const hx = t.match(/^(#{1,6})\s+(.+)$/);
+      if (hx) { flushP(); flushT(); out.push(`<h${hx[1].length}>${parseInline(hx[2])}</h${hx[1].length}>`); i++; continue; }
+
+      // 水平线
+      if (/^(\*{3,}|-{3,}|_{3,})$/.test(t)) { flushP(); flushT(); out.push('<hr>'); i++; continue; }
+
+      // 引用
+      if (t.startsWith('>')) {
+        flushP(); flushT();
+        const bq = [];
+        while (i < lines.length && lines[i].trim().startsWith('>')) { bq.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
+        out.push('<blockquote>' + parse(bq.join('\n')).replace(/<\/?p>/g, '') + '</blockquote>');
+        continue;
+      }
+
+      // 表格
+      if (t.startsWith('|') && t.endsWith('|')) { flushP(); tbuf.push(t); i++; continue; }
+
+      // 列表（使用标记符号判断类型，B6）
+      const taskMatch = t.match(/^(\s*)([-*+])\s+\[([ xX])\]\s+(.+)$/);
+      const listMatch = t.match(/^(\s*)([-*+]|\d+\.)\s+(.+)$/);
+      if (taskMatch || listMatch) {
+        flushP(); flushT();
+        const items = [];
+        const isTask = !!taskMatch;
+        const re = isTask ? /^(\s*)([-*+])\s+\[([ xX])\]\s+(.+)$/ : /^(\s*)([-*+]|\d+\.)\s+(.+)$/;
+        while (i < lines.length) {
+          const m = lines[i].match(re);
+          if (!m) break;
+          items.push({ chk: isTask ? m[3].toLowerCase() === 'x' : null, txt: m[4], marker: m[2] });
+          i++;
+        }
+        const isOrdered = /^\d/.test(items[0].marker);
+        const tag = isOrdered ? 'ol' : 'ul';
+        if (items.some(it => it.chk !== null)) {
+          out.push(`<${tag}>` + items.map(it => `<li>${it.chk ? '✓ ' : '○ '}${parseInline(it.txt)}</li>`).join('') + `</${tag}>`);
+        } else {
+          out.push(`<${tag}>` + items.map(it => `<li>${parseInline(it.txt)}</li>`).join('') + `</${tag}>`);
+        }
+        continue;
+      }
+
+      if (t === '') { flushP(); flushT(); i++; continue; }
+      pbuf.push(line);
+      i++;
     }
     flushP(); flushT();
-    return out.join("\n");
-  }
-  return { parse, parseInline };
+    return out.join('\n');
+  };
+
+  // 异步分块解析（大文件不阻塞 UI）
+  const parseAsync = (src, onProgress) => {
+    return new Promise((resolve) => {
+      const totalLines = src.split('\n').length;
+      const CHUNK_SIZE = 100;
+      let result = '';
+      let pos = 0;
+
+      const processChunk = () => {
+        const end = Math.min(pos + CHUNK_SIZE, totalLines);
+        const chunk = src.split('\n').slice(pos, end).join('\n');
+        result += parse(chunk);
+        pos = end;
+        if (onProgress) onProgress(pos / totalLines);
+        if (pos < totalLines) {
+          setTimeout(processChunk, 0);
+        } else {
+          resolve(result);
+        }
+      };
+
+      setTimeout(processChunk, 0);
+    });
+  };
+
+  // 提取某个标题下的内容
+  const extractSection = (text, re) => {
+    if (!text) return [];
+    const m = text.match(new RegExp(`##?\\s*[^\\n]*(?:${re})[\\s\\S]*?(?=\\n##?\\s|$)`, 'i'));
+    if (!m) return [];
+    return m[0].replace(/^#+\s*.*\n/, '').trim().split('\n').map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean);
+  };
+
+  // 从列表式字段中提取标签值
+  const extractField = (text, labels) => {
+    if (!text) return '';
+    const labelList = (Array.isArray(labels) ? labels : [labels]).map(s => String(s).toLowerCase());
+    for (const raw of text.split('\n')) {
+      const m = raw.match(/^\s*[-*]\s*\*\*\s*([^*]+?)\s*\*\*\s*[：:]\s*(.*)$/);
+      if (!m) continue;
+      const tag = m[1].trim().toLowerCase();
+      if (labelList.some(l => tag === l || tag.includes(l) || l.includes(tag))) return m[2].trim();
+    }
+    return '';
+  };
+
+  return { parse, parseAsync, parseInline, extractSection, extractField };
 })();
 
 /* ---------- 通用工具 ---------- */
@@ -668,7 +777,7 @@ function renderAuditDrift(text){
   let out = "";
   if (fixed && fixed[1].trim()) out += html("已修复", fixed[1]);
   if (open && open[1].trim()) out += html("已知漂移", open[1]);
-  return out || `<div class="md">${MD.parse(text)}</div>`;
+  return out || `<div class="md">${MDParser.parse(text)}</div>`;
 }
 function parseRecentSummaries(text, n=6){
   if (!text) return [];
@@ -756,7 +865,7 @@ async function render(){
       <div class="row"><span class="chev">▶</span><span class="name">${Utils.escHtml(f.title)}</span>
         <span class="tag" style="margin-left:8px;">${Utils.fmtNum(Utils.countWords(text))} 字</span>
         ${pct!==undefined ? `<span class="pct">${pct}% 完成</span>` : ""}</div>
-      <div class="body"><div class="article">${MD.parse(text)}</div></div>
+      <div class="body"><div class="article">${MDParser.parse(text)}</div></div>
     </div>`;
   }).join("") || `<div class="card empty-state">暂无设定文件</div>`;
   SETTING_FILES.filter(f => data.files[f.key]).forEach((f, idx) => {
@@ -768,11 +877,11 @@ async function render(){
   $("charList").innerHTML = graph.nodes.map(nd => `
     <div class="charcard" data-i="${nd.i}">
       <div class="name">${Utils.escHtml(nd.name)}</div>
-      <div class="tier">${Utils.escHtml(nd.tier)}${nd.func ? " · " + MD.parseInline(nd.func) : ""}</div>
-      ${nd.desire ? `<div class="kv"><b>欲</b>${MD.parseInline(nd.desire)}</div>` : ""}
-      ${nd.fear ? `<div class="kv"><b>惧</b>${MD.parseInline(nd.fear)}</div>` : ""}
-      ${nd.state ? `<div class="kv"><b>今</b>${MD.parseInline(nd.state)}</div>` : ""}
-      ${nd.arc ? `<div class="kv"><b>弧</b>${MD.parseInline(nd.arc)}</div>` : ""}
+      <div class="tier">${Utils.escHtml(nd.tier)}${nd.func ? " · " + MDParser.parseInline(nd.func) : ""}</div>
+      ${nd.desire ? `<div class="kv"><b>欲</b>${MDParser.parseInline(nd.desire)}</div>` : ""}
+      ${nd.fear ? `<div class="kv"><b>惧</b>${MDParser.parseInline(nd.fear)}</div>` : ""}
+      ${nd.state ? `<div class="kv"><b>今</b>${MDParser.parseInline(nd.state)}</div>` : ""}
+      ${nd.arc ? `<div class="kv"><b>弧</b>${MDParser.parseInline(nd.arc)}</div>` : ""}
     </div>`).join("");
   $("charList").onclick = e => { const c = e.target.closest(".charcard"); if (c) selectNode(+c.dataset.i); };
 
@@ -849,9 +958,9 @@ const Graph = (() => {
     if(i<0){ info.innerHTML='<div class="empty-state">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>'; return; }
     const n=nodes[i];
     const fields=[["故事功能",n.func],["欲望",n.desire],["恐惧",n.fear],["当前状态",n.state],["弧线",n.arc],["秘密",n.secrets]].filter((a)=>a[1]);
-    const rels=edges.filter(e=>e.s===i||e.t===i).map(e=>{ const o=nodes[e.s===i?e.t:e.s]; return `<div style="margin-bottom:6px"><span class="rname">${Utils.escHtml(o.name)}</span>${e.label?' — '+MD.parseInline(e.label):''}</div>`; });
+    const rels=edges.filter(e=>e.s===i||e.t===i).map(e=>{ const o=nodes[e.s===i?e.t:e.s]; return `<div style="margin-bottom:6px"><span class="rname">${Utils.escHtml(o.name)}</span>${e.label?' — '+MDParser.parseInline(e.label):''}</div>`; });
     info.innerHTML=`<div class="name">${Utils.escHtml(n.name)}</div><div class="tier">${Utils.escHtml(n.tier)}</div>` +
-      (fields.length?`<dl>${fields.map(([k,v])=>`<dt>${Utils.escHtml(k)}</dt><dd>${MD.parseInline(v)}</dd>`).join("")}</dl>`:'') +
+      (fields.length?`<dl>${fields.map(([k,v])=>`<dt>${Utils.escHtml(k)}</dt><dd>${MDParser.parseInline(v)}</dd>`).join("")}</dl>`:'') +
       (rels.length?`<div class="rels" style="font-size:13px;color:var(--text-muted)">${rels.join("")}</div>`:'');
   }
   return { init, setSelect };
@@ -876,7 +985,7 @@ function openChapter(i){
   document.querySelectorAll("#toc button").forEach((b,k)=>b.classList.toggle("active",k===i));
   $("article").innerHTML = `<h1>${Utils.escHtml(ch.title||("第 "+(ch.num||(i+1))+" 回"))}</h1>
     <div class="muted" style="margin-bottom:20px;font-family:var(--sans);font-size:13px;">共 ${Utils.fmtNum(Utils.countWords(ch.text))} 字</div>
-    ${MD.parse(ch.text)}`;
+    ${MDParser.parse(ch.text)}`;
   $("prevBtn").disabled = i<=0; $("nextBtn").disabled = i>=data.chapters.length-1;
   $("article").scrollTop = 0;
   if (location.hash !== "#read") switchTab("read");
