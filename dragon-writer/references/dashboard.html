@@ -124,6 +124,38 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .section-title{font-size:13px;letter-spacing:.06em;color:var(--text-muted);margin:28px 0 12px}
 .col2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 
+/* ========== Overview 组件 ========== */
+.ringwrap{display:flex;align-items:center;gap:20px}
+.ring{width:80px;height:80px;border-radius:50%;background:conic-gradient(var(--accent) 0% var(--p),var(--track) var(--p) 100%);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
+.ring::before{content:'';position:absolute;width:62px;height:62px;border-radius:50%;background:var(--bg-elevated)}
+.ring .num{position:relative;z-index:1;font-family:var(--serif);font-size:18px;font-weight:700;color:var(--text)}
+.ring .pct-sym{font-size:11px;font-weight:400;color:var(--text-muted)}
+.ringcaption{font-size:13px;margin-bottom:2px}
+.ringcaption.muted{font-size:12px}
+.state-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.state-item{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:var(--bg-subtle);border-radius:var(--radius-sm)}
+.state-item b{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.state-item span{font-size:14px;line-height:1.5}
+.table-wrap{overflow-x:auto}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13px}
+.table-wrap th,.table-wrap td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.table-wrap th{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.drift-section{margin-bottom:16px}
+.drift-title{font-weight:600;margin-bottom:6px;color:var(--accent)}
+.drift-item{margin-bottom:10px;padding-left:8px;border-left:2px solid var(--border)}
+.drift-item b{font-size:13px}
+.drift-item .muted{font-size:12px;margin-top:2px}
+.article{line-height:1.8;font-size:14px}
+.article p{margin:0 0 12px}
+.article h1,.article h2,.article h3,.article h4{margin:20px 0 8px;font-family:var(--serif)}
+.article table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+.article th,.article td{text-align:left;padding:6px 10px;border:1px solid var(--border)}
+.article th{background:var(--bg-subtle)}
+.article code{background:var(--bg-subtle);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12px}
+.article pre code{display:block;padding:12px;overflow-x:auto}
+.article ul,.article ol{padding-left:20px;margin:8px 0}
+.article blockquote{border-left:3px solid var(--accent);margin:12px 0;padding:8px 16px;background:var(--bg-subtle);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+
 /* ========== Responsive ========== */
 @media(max-width:820px) {
   .layout{grid-template-columns:1fr}
@@ -786,6 +818,164 @@ const IDB = (() => {
   return { save, load };
 })();
 const idbSave = IDB.save;
+
+/* ---------- Overview 组件 ---------- */
+const Overview = {
+  _rendered: false,
+
+  onEnter() {
+    if (!this._rendered) this.render();
+  },
+
+  render() {
+    const book = Store.get('book');
+    const chapters = Store.get('chapters');
+    const files = Store.get('files');
+    if (!book) { document.getElementById('panel-overview').innerHTML = '<div class="empty-state"><div class="icon">&#x1F4DA;</div>未找到书籍数据</div>'; return; }
+
+    const target = book.targetChapters || 0;
+    const done = chapters.length;
+    const pct = target ? Math.min(100, Math.round(done / target * 100)) : 0;
+    const totalWords = chapters.reduce((s, c) => s + Utils.countWords(c.text), 0);
+
+    document.getElementById('panel-overview').innerHTML = `
+      <h2>总览</h2>
+      <p class="lede">本书当前的写作进度与最新状态。</p>
+      <div class="card" style="margin-bottom:20px;">
+        <div class="ringwrap">
+          <div class="ring" style="--p:${pct}">
+            <span class="num">${pct}<span class="pct-sym">%</span></span>
+          </div>
+          <div>
+            <div class="ringcaption">已完成 <strong>${done}</strong> / <strong>${target || '—'}</strong> 章</div>
+            <div class="ringcaption">约 <strong>${Utils.fmtNum(totalWords)}</strong> 字 / 目标单章 <strong>${Utils.fmtNum(book.chapterWordCount || 3000)}</strong> 字</div>
+            <div class="ringcaption muted">${book.updatedAt ? '更新于 ' + Utils.fmtDate(book.updatedAt) : ''}</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid stats" id="statGrid">${this._renderStats(book, chapters, totalWords)}</div>
+      <div class="section-title">当前状态</div>
+      <div class="grid col2" id="stateGrid">${this._renderCurrentState(files.current_state)}</div>
+      <div class="section-title">当前焦点</div>
+      <div id="focusCard" class="card">${this._renderFocus(files.current_focus)}</div>
+      <div class="section-title">最近章节</div>
+      <div id="recentChapters" class="card">${this._renderRecentChapters(files.chapter_summaries)}</div>
+      <div class="section-title">审计漂移</div>
+      <div id="auditDrift" class="card">${this._renderAuditDrift(files.audit_drift)}</div>
+      <div class="section-title">字数趋势</div>
+      <div id="wordTrend" class="card">${this._renderWordTrend(chapters)}</div>
+    `;
+    this._rendered = true;
+  },
+
+  _renderStats(book, chapters, totalWords) {
+    const done = chapters.length;
+    const target = book.targetChapters || 0;
+    const avg = done ? Math.round(totalWords / done) : 0;
+    return [
+      ['总章节', `${done} 章`],
+      ['目标章节', target ? `${target} 章` : '—'],
+      ['总字数', Utils.fmtNum(totalWords)],
+      ['平均章字数', done ? Utils.fmtNum(avg) : '—'],
+      ['单章目标', Utils.fmtNum(book.chapterWordCount || 3000)],
+      ['状态', Utils.statusLabel(book.status)],
+    ].map(([l, v]) => `<div class="stat card"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+  },
+
+  _renderCurrentState(text) {
+    if (!text) return '<div class="card empty-state">未找到 current_state.md</div>';
+    const section = (h) => {
+      const m = text.match(new RegExp(`##?\\s*${h}[\\s\\S]*?(?=\\n##?\\s|$)`, 'i'));
+      return m ? m[0].replace(/^#+\s*.*\n/, '').trim() : '';
+    };
+    const items = [
+      ['location', '地点/时间', '地点?与?时间'],
+      ['protagonist', '主角', '主角'],
+      ['truth', '已知真相', '已知真[相]?'],
+      ['relationship', '关系', '关系'],
+      ['conflict', '当前冲突', '当前冲突'],
+    ].map(([k, label, re]) => {
+      const s = section(re);
+      if (!s) return null;
+      return `<div class="state-item"><b>${label}</b><span>${MDParser.parseInline(s.split('\n').filter(l => l.trim()).slice(0, 3).join('；'))}</span></div>`;
+    }).filter(Boolean);
+    return items.length ? `<div class="state-grid">${items.join('')}</div>` : '<div class="empty-state">暂无状态记录</div>';
+  },
+
+  _renderFocus(text) {
+    if (!text) return '<div class="empty-state">暂无当前焦点</div>';
+    const lines = MDParser.parse(text);
+    return `<div class="article" style="font-size:14px">${lines}</div>`;
+  },
+
+  _renderRecentChapters(text) {
+    if (!text) return '<div class="empty-state">暂无章节摘要</div>';
+    const rows = text.split('\n').filter(l => /^\|\s*[：:]?\d/.test(l.trim()));
+    const recent = rows.slice(-6).map(r => {
+      const c = r.replace(/^\||\|$/g, '').split('|').map(x => x.trim());
+      return { ch: c[0], title: c[1], chars: c[2], events: c[3], change: c[4], hook: c[5], mood: c[6] };
+    }).filter(r => r.title);
+    if (!recent.length) return '<div class="empty-state">暂无章节摘要</div>';
+    return `<div class="table-wrap"><table><thead><tr><th>章</th><th>标题</th><th>角色</th><th>事件</th><th>变化</th><th>钩子</th><th>心境</th></tr></thead><tbody>` +
+      recent.slice().reverse().map(r => `<tr><td style="font-family:var(--mono)">${Utils.escHtml(r.ch)}</td><td>${Utils.escHtml(r.title || '—')}</td><td class="muted">${Utils.escHtml(r.chars || '—')}</td><td class="muted">${Utils.escHtml(r.events || '—')}</td><td class="muted">${Utils.escHtml(r.change || '—')}</td><td class="muted">${Utils.escHtml(r.hook || '—')}</td><td class="muted">${Utils.escHtml(r.mood || '—')}</td></tr>`).join('') +
+      `</tbody></table></div>`;
+  },
+
+  _renderAuditDrift(text) {
+    if (!text) return '<div class="empty-state">暂无审计漂移记录</div>';
+    const section = (title) => {
+      const m = text.match(new RegExp(`## ${title}([\\s\\S]*?)(?=\\n## |$)`, 'i'));
+      if (!m || !m[1].trim()) return '';
+      return m[1];
+    };
+    const renderDriftSection = (title, body) => {
+      const items = body.split(/\n###\s+/).filter(Boolean);
+      return `<div class="drift-section"><div class="drift-title">${title}</div>` +
+        items.map(it => {
+          const li = it.split('\n').filter(l => l.trim());
+          const head = li.shift() || '';
+          return `<div class="drift-item"><b>${Utils.escHtml(head.trim().replace(/^第\d+章 · /, ''))}</b>` +
+            li.map(l => `<div class="muted">${Utils.escHtml(l.replace(/^-\s*/, '').trim())}</div>`).join('') +
+            `</div>`;
+        }).join('') + `</div>`;
+    };
+    const fixed = section('已修复');
+    const open = section('已知漂移');
+    let out = '';
+    if (fixed) out += renderDriftSection('已修复', fixed);
+    if (open) out += renderDriftSection('已知漂移', open);
+    return out || `<div class="article">${MDParser.parse(text)}</div>`;
+  },
+
+  _renderWordTrend(chapters) {
+    if (!chapters.length) return '<div class="empty-state">暂无章节数据</div>';
+    const maxWords = Math.max(...chapters.map(c => Utils.countWords(c.text)), 1);
+    const barWidth = Math.max(4, Math.min(20, 600 / chapters.length));
+    const gap = 2;
+    const height = 120;
+    const width = Math.max(600, chapters.length * (barWidth + gap));
+    const accent = Utils.theme.get('accent');
+    const muted = Utils.theme.get('textMuted');
+
+    const bars = chapters.map((c, i) => {
+      const h = (Utils.countWords(c.text) / maxWords) * (height - 20);
+      const x = i * (barWidth + gap);
+      const y = height - 10 - h;
+      return `<rect x="${x}" y="${y}" width="${barWidth}" height="${h}" fill="${accent}" opacity="0.7" rx="1">
+        <title>第${c.num || (i + 1)}回: ${Utils.fmtNum(Utils.countWords(c.text))} 字</title>
+      </rect>`;
+    }).join('');
+
+    const targetWords = Store.get('book')?.chapterWordCount || 3000;
+    const targetY = height - 10 - (targetWords / maxWords) * (height - 20);
+    const targetLine = `<line x1="0" y1="${targetY}" x2="${width}" y2="${targetY}" stroke="${muted}" stroke-dasharray="4,3" stroke-width="1"/>
+      <text x="${width - 4}" y="${targetY - 4}" fill="${muted}" font-size="10" text-anchor="end">目标 ${Utils.fmtNum(targetWords)} 字</text>`;
+
+    return `<div style="overflow-x:auto"><svg width="${width}" height="${height + 20}" viewBox="0 0 ${width} ${height + 20}">
+      ${bars}${targetLine}
+    </svg></div><div class="muted" style="font-size:12px;margin-top:4px">每章字数（鼠标悬停查看具体数值）</div>`;
+  },
+};
 
 /* ---------- 按嵌入数据计算的各文件解析函数 ---------- */
 function sectionLines(text, re){
