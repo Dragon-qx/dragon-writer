@@ -432,6 +432,43 @@ const Utils = {
 - 仍然兼容 Chrome/Edge 86+，Safari/Firefox 兼容模式
 - 仍然使用 IndexedDB 记住上次书架
 
+## 已知 Bug 修复清单
+
+代码分析发现以下关键 Bug，必须在重构中修复：
+
+| # | 严重度 | 问题 | 行号 | 修复方案 |
+|---|--------|------|------|----------|
+| B1 | 🔴 | `idbSave` 未定义 → `IDB.save` | 353 | 修正函数名 |
+| B2 | 🔴 | `e.fullPath` 应为 `e.webkitRelativePath` | 240,268,270,285,305,323 | 统一使用 `e.webkitRelativePath` |
+| B3 | 🔴 | Canvas `ctx.font` 使用 `var(--sans)` 无效 | 607,620,629,630 | 读取 CSS 变量值后内联字体名 |
+| B4 | 🔴 | rAF 循环永不取消，堆积 | 598-604 | GraphEngine.init() 先 cancel 之前的 raf |
+| B5 | 🔴 | `className` 写了 JSX 语法 | 540 | 改为 `class` |
+| B6 | 🟡 | `getComputedStyle` 每帧调用 | 608-611,630 | 主题切换时缓存一次 |
+| B7 | 🟡 | `selected` 未重置 | 588 | GraphEngine.init() 重置 selected |
+| B8 | 🟡 | `nodes.indexOf` 在循环内 O(n²) | 602,628 | 改用循环索引 |
+| B9 | 🟡 | 无文件契约别名回退 | 340-345 | 添加别名 fallback 逻辑 |
+| B10 | 🟡 | `chapters/index.json` 被忽略 | 279-294 | 优先读取 index.json |
+| B11 | 🟡 | 主题切换无 light 模式 | 681-688 | 添加 light/dark/auto 三态 |
+| B12 | 🟡 | 无 hash 深链接 | 675-679 | 添加 hashchange 监听 |
+| B13 | 🟡 | 无 `prefers-reduced-motion` 支持 | 全局 | 添加媒体查询 |
+
+## 新增功能
+
+| # | 功能 | 说明 | 优先级 |
+|---|------|------|--------|
+| F1 | 章节搜索 | 在当前章节内搜索关键词，高亮匹配 | 高 |
+| F2 | 角色搜索/筛选 | 按名称搜索角色，按 tier 筛选 | 高 |
+| F3 | 字数趋势图 | 总览页显示每章字数柱状图 | 中 |
+| F4 | 键盘快捷键 | `←→` 翻章，`Ctrl+1~5` 切标签，`?` 显示帮助 | 中 |
+| F5 | 字号调整 | 阅读器字号可调 | 中 |
+| F6 | 阅读器进度条 | 显示当前章节在全书中的位置 | 低 |
+| F7 | 设定文件别名回退 | 兼容旧命名（story_bible.md → story_frame.md 等） | 高 |
+| F8 | pending_hooks 展示 | 在总览中显示钩子状态 | 中 |
+| F9 | current_focus 展示 | 在总览中显示当前写作焦点 | 中 |
+| F10 | 导出文件名安全处理 | 移除文件名中的非法字符 | 高 |
+| F11 | 字数统计去 Markdown | 只统计正文字数，不统计语法标记 | 中 |
+| F12 | 最近章节表显示完整列 | 显示 state_changes 和 hook_activity | 低 |
+
 ## 实施计划
 
 1. 重构 Store 模块
