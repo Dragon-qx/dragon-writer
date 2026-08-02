@@ -212,6 +212,114 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
    选择/重连书文件夹，运行时读文件、实时计算并渲染。永远反映最新文件。
    ========================================================================== */
 
+/* ---------- Utils 工具模块 ---------- */
+const Utils = (() => {
+  // HTML 转义
+  const escHtml = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+
+  // 数字格式化
+  const fmtNum = n => (n || 0).toLocaleString('zh-CN');
+
+  // 字数统计（去 Markdown 语法）
+  const countWords = s => {
+    if (!s) return 0;
+    // 移除代码块、表格、标题标记
+    const clean = s
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/^#+\s*/gm, '')
+      .replace(/^\|.*\|$/gm, '')
+      .replace(/[*_~`]/g, '')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+    return (clean.match(/[一-鿿]/g) || []).length +
+           (clean.match(/[A-Za-z0-9]+/g) || []).length;
+  };
+
+  // 状态标签映射
+  const statusLabel = s => ({ outlining:'大纲中', drafting:'写作中', paused:'已暂停', completed:'已完成', active:'进行中' }[s] || s || '—');
+
+  // 截断
+  const truncate = (s, n = 60) => s && s.length > n ? s.slice(0, n) + '…' : s;
+
+  // 日期格式化
+  const fmtDate = d => d ? String(d).slice(0, 10) : '';
+  const timeAgo = d => {
+    if (!d) return '';
+    const diff = Date.now() - new Date(d).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days < 1) return '今天';
+    if (days < 2) return '昨天';
+    if (days < 7) return `${days} 天前`;
+    if (days < 30) return `${Math.floor(days / 7)} 周前`;
+    return fmtDate(d);
+  };
+
+  // 主题管理
+  const theme = (() => {
+    const KEY = 'dw-theme';
+    let current = 'auto';
+    let cssVarCache = {};
+
+    const readCSSVar = (name) => {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    };
+
+    const refreshCache = () => {
+      const root = document.documentElement;
+      const style = getComputedStyle(root);
+      cssVarCache = {
+        accent: style.getPropertyValue('--accent').trim() || '#b5651d',
+        textMuted: style.getPropertyValue('--text-muted').trim() || '#6b6760',
+        border: style.getPropertyValue('--border').trim() || '#e0dcd4',
+        bgSubtle: style.getPropertyValue('--bg-subtle').trim() || '#efeae1',
+        text: style.getPropertyValue('--text').trim() || '#1c1b18',
+        sans: style.getPropertyValue('--sans').trim() || '-apple-system,sans-serif',
+      };
+    };
+
+    const init = () => {
+      try { current = localStorage.getItem(KEY) || 'auto'; } catch { current = 'auto'; }
+      apply();
+    };
+
+    const apply = () => {
+      document.documentElement.classList.remove('theme-auto', 'theme-dark', 'theme-light');
+      if (current === 'dark') document.documentElement.classList.add('theme-dark');
+      else if (current === 'light') document.documentElement.classList.add('theme-light');
+      else document.documentElement.classList.add('theme-auto');
+      refreshCache();
+    };
+
+    const toggle = () => {
+      current = current === 'dark' ? 'light' : current === 'light' ? 'auto' : 'dark';
+      apply();
+      try { localStorage.setItem(KEY, current); } catch {}
+      return current;
+    };
+
+    const get = (name) => cssVarCache[name] || readCSSVar(name);
+
+    return { init, toggle, apply, get, refresh: refreshCache };
+  })();
+
+  // 键盘快捷键
+  const shortcuts = (() => {
+    const registry = new Map();
+    const handler = (e) => {
+      const key = [e.ctrlKey ? 'Ctrl' : '', e.shiftKey ? 'Shift' : '', e.altKey ? 'Alt' : '', e.key]
+        .filter(Boolean).join('+');
+      const fn = registry.get(key);
+      if (fn) { fn(e); e.preventDefault(); }
+    };
+
+    const register = (key, fn) => { registry.set(key, fn); if (registry.size === 1) document.addEventListener('keydown', handler); };
+    const unregister = (key) => { registry.delete(key); if (registry.size === 0) document.removeEventListener('keydown', handler); };
+
+    return { register, unregister };
+  })();
+
+  return { escHtml, fmtNum, countWords, statusLabel, truncate, fmtDate, timeAgo, theme, shortcuts };
+})();
+
 /* ---------- 轻量 Markdown 解析器 ---------- */
 const MD = (() => {
   const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -273,10 +381,6 @@ const MD = (() => {
 
 /* ---------- 通用工具 ---------- */
 const $ = id => document.getElementById(id);
-const statusLabel = s => ({ outlining:"大纲中", drafting:"写作中", paused:"已暂停", completed:"已完成", active:"进行中" }[s] || s || "—");
-const escHtml = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const fmtNum = n => (n || 0).toLocaleString("zh-CN");
-function countText(s){ if(!s) return 0; return (s.match(/[一-鿿]/g)||[]).length + (s.match(/[A-Za-z0-9]+/g)||[]).length; }
 
 /* ---------- 运行时数据（由读文件夹填充） ---------- */
 let data = null;
@@ -490,12 +594,12 @@ function renderAuditDrift(text){
   const html = (title, body) => {
     const items = body.split(/\n###\s+/).filter(Boolean);
     if (!items.length) return "";
-    return `<div style="margin-bottom:16px;"><div style="font-weight:600;margin-bottom:6px;color:var(--accent)">${escHtml(title)}</div>` +
+    return `<div style="margin-bottom:16px;"><div style="font-weight:600;margin-bottom:6px;color:var(--accent)">${Utils.escHtml(title)}</div>` +
       items.map(it => {
         const li = it.split("\n").filter(l => l.trim());
         const head = li.shift() || "";
-        return `<div style="margin-bottom:10px;padding-left:8px;border-left:2px solid var(--border)"><b>${escHtml(head.trim().replace(/^第\d+章 · /,""))}</b>` +
-          li.map(l => `<div class="muted" style="font-size:13px;margin-top:2px">${escHtml(l.replace(/^-\s*/,"").trim())}</div>`).join("") +
+        return `<div style="margin-bottom:10px;padding-left:8px;border-left:2px solid var(--border)"><b>${Utils.escHtml(head.trim().replace(/^第\d+章 · /,""))}</b>` +
+          li.map(l => `<div class="muted" style="font-size:13px;margin-top:2px">${Utils.escHtml(l.replace(/^-\s*/,"").trim())}</div>`).join("") +
           `</div>`;
       }).join("") + `</div>`;
   };
@@ -514,7 +618,7 @@ function parseRecentSummaries(text, n=6){
 function parseCurrentState(text){
   if (!text) return "";
   const section = h => { const m = text.match(new RegExp(`##?\\s*${h}[\\s\\S]*?(?=\\n##?\\s|$)`,"i")); return m ? m[0].replace(/^#+\s*.*\n/,"").trim() : ""; };
-  const pick = (h,label) => { const s = section(h); if(!s) return null; return `<b>${escHtml(label)}</b>：${escHtml(s.split("\n").filter(l=>l.trim()).slice(0,6).join("；"))}`; };
+  const pick = (h,label) => { const s = section(h); if(!s) return null; return `<b>${Utils.escHtml(label)}</b>：${Utils.escHtml(s.split("\n").filter(l=>l.trim()).slice(0,6).join("；"))}`; };
   const items = ["地点?与?时间","主角","已知真相","关系","资源","当前冲突"].map((k,i) => pick(k,["地点/时间","主角","已知真相","关系/资源","资源/当前冲突","当前冲突"][i])).filter(Boolean);
   return items.length ? items.join("<br>") : `<span class="muted">暂无状态记录</span>`;
 }
@@ -545,17 +649,17 @@ function buildGraph(roles){
 async function render(){
   $("bookTitle").textContent = data.book.title || "未命名";
   $("bookSub").textContent = [data.book.genre, data.book.language === "zh" ? "中文" : data.book.language].filter(Boolean).join(" · ");
-  $("bookStatus").textContent = statusLabel(data.book.status);
+  $("bookStatus").textContent = Utils.statusLabel(data.book.status);
 
   const target = data.book.targetChapters || 0, done = data.chapters.length;
   const pct = target ? Math.min(100, Math.round(done / target * 100)) : 0;
   data.book.chapterWordCount = data.book.chapterWordCount || 3000;
-  const totalWords = data.chapters.reduce((s,c) => s + countText(c.text), 0);
+  const totalWords = data.chapters.reduce((s,c) => s + Utils.countWords(c.text), 0);
   $("ringPct").textContent = pct; $("ring").style.setProperty("--p", pct);
   $("ovDone").textContent = done; $("ovTarget").textContent = target || "—";
-  $("ovWords").textContent = fmtNum(totalWords); $("ovChWords").textContent = fmtNum(data.book.chapterWordCount);
+  $("ovWords").textContent = Utils.fmtNum(totalWords); $("ovChWords").textContent = Utils.fmtNum(data.book.chapterWordCount);
   $("ovUpdated").textContent = data.book.updatedAt ? "更新于 " + String(data.book.updatedAt).slice(0,10) : "";
-  const stats = [["总章节",`${done} 章`],["目标章节", target ? `${target} 章` : "—"],["总字数",fmtNum(totalWords)],["平均章字数", done ? fmtNum(Math.round(totalWords/done)) : "—"],["单章目标",fmtNum(data.book.chapterWordCount)],["状态",statusLabel(data.book.status)]];
+  const stats = [["总章节",`${done} 章`],["目标章节", target ? `${target} 章` : "—"],["总字数",Utils.fmtNum(totalWords)],["平均章字数", done ? Utils.fmtNum(Math.round(totalWords/done)) : "—"],["单章目标",Utils.fmtNum(data.book.chapterWordCount)],["状态",Utils.statusLabel(data.book.status)]];
   $("statGrid").innerHTML = stats.map(([l,v]) => `<div class="stat card"><div class="label">${l}</div><div class="value">${v}</div></div>`).join("");
   $("stateGrid").innerHTML = parseCurrentState(data.files.current_state)
     ? `<div class="card" style="grid-column:1/-1;">${parseCurrentState(data.files.current_state)}</div>`
@@ -563,17 +667,17 @@ async function render(){
   const recents = parseRecentSummaries(data.files.chapter_summaries);
   $("recentChapters").innerHTML = recents.length
     ? `<table><thead><tr><th>章</th><th>标题</th><th>角色</th><th>事件</th><th>心境</th></tr></thead><tbody>` +
-      recents.slice().reverse().map(r => `<tr><td style="font-family:var(--mono)">${escHtml(r.ch)}</td><td>${escHtml(r.title||"—")}</td><td class="muted">${escHtml(r.chars||"—")}</td><td class="muted">${escHtml(r.events||"—")}</td><td class="muted">${escHtml(r.mood||"—")}</td></tr>`).join("") + `</tbody></table>`
+      recents.slice().reverse().map(r => `<tr><td style="font-family:var(--mono)">${Utils.escHtml(r.ch)}</td><td>${Utils.escHtml(r.title||"—")}</td><td class="muted">${Utils.escHtml(r.chars||"—")}</td><td class="muted">${Utils.escHtml(r.events||"—")}</td><td class="muted">${Utils.escHtml(r.mood||"—")}</td></tr>`).join("") + `</tbody></table>`
     : `<div class="empty-state">暂无章节摘要</div>`;
   $("auditDrift").innerHTML = renderAuditDrift(data.files.audit_drift);
 
   const completion = calcSettingsCompletion(data.files);
   $("settingsList").innerHTML = completion.map((d, idx) => `
     <div class="card domain" id="dom-${idx}">
-      <div class="row"><span class="chev">▶</span><span class="name">${escHtml(d.title)}</span>
+      <div class="row"><span class="chev">▶</span><span class="name">${Utils.escHtml(d.title)}</span>
         ${d.present ? `<span class="pct">${d.pct}%</span>` : `<span class="pct muted">未找到</span>`}</div>
       <div class="progress-wrap" style="margin-left:16px;"><div class="progress-bar"><span style="width:${d.pct}%"></span></div></div>
-      <ul>${d.items.map(it => `<li class="${it.ok ? "ok" : ""}">${escHtml(it.label)}</li>`).join("")}</ul>
+      <ul>${d.items.map(it => `<li class="${it.ok ? "ok" : ""}">${Utils.escHtml(it.label)}</li>`).join("")}</ul>
     </div>`).join("");
   completion.forEach((d, idx) => { const el = $("dom-"+idx); el.querySelector(".row").onclick = () => el.classList.toggle("open"); if (d.pct < 100) el.classList.add("open"); });
 
@@ -589,8 +693,8 @@ async function render(){
     const comp = completion.find(c => c.key === f.key);
     const pct = comp ? comp.pct : 0;
     return `<div class="card settingfile open" id="sf-${idx}">
-      <div class="row"><span class="chev">▶</span><span class="name">${escHtml(f.title)}</span>
-        <span class="tag" style="margin-left:8px;">${fmtNum(countText(text))} 字</span>
+      <div class="row"><span class="chev">▶</span><span class="name">${Utils.escHtml(f.title)}</span>
+        <span class="tag" style="margin-left:8px;">${Utils.fmtNum(Utils.countWords(text))} 字</span>
         ${pct!==undefined ? `<span class="pct">${pct}% 完成</span>` : ""}</div>
       <div class="body"><div class="article">${MD.parse(text)}</div></div>
     </div>`;
@@ -603,8 +707,8 @@ async function render(){
   drawGraph(graph);
   $("charList").innerHTML = graph.nodes.map(nd => `
     <div class="charcard" data-i="${nd.i}">
-      <div class="name">${escHtml(nd.name)}</div>
-      <div class="tier">${escHtml(nd.tier)}${nd.func ? " · " + MD.parseInline(nd.func) : ""}</div>
+      <div class="name">${Utils.escHtml(nd.name)}</div>
+      <div class="tier">${Utils.escHtml(nd.tier)}${nd.func ? " · " + MD.parseInline(nd.func) : ""}</div>
       ${nd.desire ? `<div class="kv"><b>欲</b>${MD.parseInline(nd.desire)}</div>` : ""}
       ${nd.fear ? `<div class="kv"><b>惧</b>${MD.parseInline(nd.fear)}</div>` : ""}
       ${nd.state ? `<div class="kv"><b>今</b>${MD.parseInline(nd.state)}</div>` : ""}
@@ -685,9 +789,9 @@ const Graph = (() => {
     if(i<0){ info.innerHTML='<div class="empty-state">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>'; return; }
     const n=nodes[i];
     const fields=[["故事功能",n.func],["欲望",n.desire],["恐惧",n.fear],["当前状态",n.state],["弧线",n.arc],["秘密",n.secrets]].filter((a)=>a[1]);
-    const rels=edges.filter(e=>e.s===i||e.t===i).map(e=>{ const o=nodes[e.s===i?e.t:e.s]; return `<div style="margin-bottom:6px"><span class="rname">${escHtml(o.name)}</span>${e.label?' — '+MD.parseInline(e.label):''}</div>`; });
-    info.innerHTML=`<div class="name">${escHtml(n.name)}</div><div class="tier">${escHtml(n.tier)}</div>` +
-      (fields.length?`<dl>${fields.map(([k,v])=>`<dt>${escHtml(k)}</dt><dd>${MD.parseInline(v)}</dd>`).join("")}</dl>`:'') +
+    const rels=edges.filter(e=>e.s===i||e.t===i).map(e=>{ const o=nodes[e.s===i?e.t:e.s]; return `<div style="margin-bottom:6px"><span class="rname">${Utils.escHtml(o.name)}</span>${e.label?' — '+MD.parseInline(e.label):''}</div>`; });
+    info.innerHTML=`<div class="name">${Utils.escHtml(n.name)}</div><div class="tier">${Utils.escHtml(n.tier)}</div>` +
+      (fields.length?`<dl>${fields.map(([k,v])=>`<dt>${Utils.escHtml(k)}</dt><dd>${MD.parseInline(v)}</dd>`).join("")}</dl>`:'') +
       (rels.length?`<div class="rels" style="font-size:13px;color:var(--text-muted)">${rels.join("")}</div>`:'');
   }
   return { init, setSelect };
@@ -704,14 +808,14 @@ function selectNode(i){
 /* ---------- 阅读 ---------- */
 let currentChapter=-1;
 function drawToc(chapters){
-  $("toc").innerHTML = `<div class="toc-title">目录 · ${chapters.length} 章</div>` + chapters.map((c,i) => `<button data-i="${i}"><span class="ch-no">第 ${c.num||(i+1)} 回</span>${escHtml(c.title||c.name)}</button>`).join("");
+  $("toc").innerHTML = `<div class="toc-title">目录 · ${chapters.length} 章</div>` + chapters.map((c,i) => `<button data-i="${i}"><span class="ch-no">第 ${c.num||(i+1)} 回</span>${Utils.escHtml(c.title||c.name)}</button>`).join("");
   $("toc").onclick = e => { const b=e.target.closest("button"); if(b) openChapter(+b.dataset.i); };
 }
 function openChapter(i){
   const ch=data.chapters[i]; if(!ch) return; currentChapter=i;
   document.querySelectorAll("#toc button").forEach((b,k)=>b.classList.toggle("active",k===i));
-  $("article").innerHTML = `<h1>${escHtml(ch.title||("第 "+(ch.num||(i+1))+" 回"))}</h1>
-    <div class="muted" style="margin-bottom:20px;font-family:var(--sans);font-size:13px;">共 ${fmtNum(countText(ch.text))} 字</div>
+  $("article").innerHTML = `<h1>${Utils.escHtml(ch.title||("第 "+(ch.num||(i+1))+" 回"))}</h1>
+    <div class="muted" style="margin-bottom:20px;font-family:var(--sans);font-size:13px;">共 ${Utils.fmtNum(Utils.countWords(ch.text))} 字</div>
     ${MD.parse(ch.text)}`;
   $("prevBtn").disabled = i<=0; $("nextBtn").disabled = i>=data.chapters.length-1;
   $("article").scrollTop = 0;
@@ -731,14 +835,9 @@ function switchTab(name){
   location.hash = name;
 }
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
-function applyTheme(mode){
-  const root=document.documentElement; root.classList.remove("theme-auto","theme-dark");
-  if(mode==="dark") root.classList.add("theme-dark"); else if(mode==="auto") root.classList.add("theme-auto");
-  $("themeBtn").textContent = mode==="dark" ? "☀" : "🌙";
-  try{ localStorage.setItem("dw-theme", mode); }catch{}
-}
-$("themeBtn").onclick = () => { const cur=(localStorage.getItem("dw-theme")||"auto"); applyTheme(cur==="dark"?"auto":"dark"); };
-applyTheme((localStorage.getItem("dw-theme")||"auto"));
+$("themeBtn").onclick = () => { const mode = Utils.theme.toggle(); $("themeBtn").textContent = mode === "dark" ? "☀" : "🌙"; };
+Utils.theme.init();
+$("themeBtn").textContent = (localStorage.getItem("dw-theme") || "auto") === "dark" ? "☀" : "🌙";
 
 /* ---------- 入口绑定 ---------- */
 let lastHandle = null;
@@ -777,7 +876,7 @@ $("exportBtn").onclick = () => {
   const lines = [];
   lines.push(data.book.title || "未命名");
   lines.push("=".repeat(40));
-  lines.push(`共 ${data.chapters.length} 章 / 约 ${fmtNum(data.chapters.reduce((s,c) => s + countText(c.text), 0))} 字`);
+  lines.push(`共 ${data.chapters.length} 章 / 约 ${Utils.fmtNum(data.chapters.reduce((s,c) => s + Utils.countWords(c.text), 0))} 字`);
   lines.push("");
   data.chapters.forEach((c, i) => {
     lines.push(`\n第 ${c.num || (i + 1)} 回${c.title ? " · " + c.title : ""}`);
