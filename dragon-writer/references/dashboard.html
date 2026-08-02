@@ -548,6 +548,77 @@ const MDParser = (() => {
   return { parse, parseAsync, parseInline, extractSection, extractField };
 })();
 
+/* ---------- Router 路由模块 ---------- */
+const Router = (() => {
+  let current = 'overview';
+  const componentMap = {};
+
+  const register = (name, component) => {
+    componentMap[name] = component;
+  };
+
+  const switchTab = (tab) => {
+    // 防止重复切换
+    if (tab === current) return;
+
+    // 调用旧组件的 onLeave
+    const oldComp = componentMap[current];
+    if (oldComp && oldComp.onLeave) oldComp.onLeave();
+
+    // 更新 tab 按钮状态
+    document.querySelectorAll('.tabs [role="tab"]').forEach(b => {
+      const isActive = b.dataset.tab === tab;
+      b.setAttribute('aria-selected', isActive);
+      b.classList.toggle('active', isActive);
+    });
+
+    // 更新面板
+    document.querySelectorAll('.panel').forEach(p => {
+      const isActive = p.id === 'panel-' + tab;
+      p.classList.toggle('active', isActive);
+      p.hidden = !isActive;
+    });
+
+    // 调用新组件的 onEnter
+    const newComp = componentMap[tab];
+    if (newComp && newComp.onEnter) newComp.onEnter();
+
+    current = tab;
+    location.hash = tab;
+  };
+
+  const init = () => {
+    // 读取 URL hash
+    const hash = location.hash.replace('#', '');
+    if (hash && componentMap[hash]) {
+      current = hash;
+    }
+
+    // 绑定标签按钮
+    document.querySelectorAll('.tabs [role="tab"]').forEach(b => {
+      b.addEventListener('click', () => switchTab(b.dataset.tab));
+    });
+
+    // 监听 hash 变化
+    window.addEventListener('hashchange', () => {
+      const h = location.hash.replace('#', '');
+      if (h && componentMap[h] && h !== current) switchTab(h);
+    });
+
+    // 注册快捷键 Ctrl+1~5
+    Utils.shortcuts.register('Ctrl+1', () => switchTab('overview'));
+    Utils.shortcuts.register('Ctrl+2', () => switchTab('settings'));
+    Utils.shortcuts.register('Ctrl+3', () => switchTab('settings-content'));
+    Utils.shortcuts.register('Ctrl+4', () => switchTab('chars'));
+    Utils.shortcuts.register('Ctrl+5', () => switchTab('read'));
+
+    // 激活初始面板
+    switchTab(current);
+  };
+
+  return { register, switchTab, init, get current() { return current; } };
+})();
+
 /* ---------- 通用工具 ---------- */
 const $ = id => document.getElementById(id);
 
@@ -988,25 +1059,16 @@ function openChapter(i){
     ${MDParser.parse(ch.text)}`;
   $("prevBtn").disabled = i<=0; $("nextBtn").disabled = i>=data.chapters.length-1;
   $("article").scrollTop = 0;
-  if (location.hash !== "#read") switchTab("read");
+  if (location.hash !== "#read") Router.switchTab("read");
 }
 $("prevBtn").onclick = () => { if(currentChapter>0) openChapter(currentChapter-1); };
 $("nextBtn").onclick = () => { if(currentChapter<data.chapters.length-1) openChapter(currentChapter+1); };
 
-/* ---------- Tab + 主题 ---------- */
-function switchTab(name){
-  document.querySelectorAll(".tabs button").forEach(b => {
-    const isActive = b.dataset.tab === name;
-    b.classList.toggle("active", isActive);
-    b.setAttribute("aria-selected", isActive);
-  });
-  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id==="panel-"+name));
-  location.hash = name;
-}
-document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+/* ---------- 主题 ---------- */
 $("themeBtn").onclick = () => { const mode = Utils.theme.toggle(); $("themeBtn").textContent = mode === "dark" ? "☀" : "🌙"; };
 Utils.theme.init();
 $("themeBtn").textContent = (localStorage.getItem("dw-theme") || "auto") === "dark" ? "☀" : "🌙";
+Router.init();
 
 /* ---------- 入口绑定 ---------- */
 let lastHandle = null;
