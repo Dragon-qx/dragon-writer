@@ -4,77 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="58e3aec4-34c3-4a26-855e-308e09cc9a7b" name="Changes" comment="feat：v2.2">
-      <change afterPath="$PROJECT_DIR$/dragon-writer/.editorconfig" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/.gitattributes" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/book.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/chapters/index.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/audit-drift.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/author_intent.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/book_rules.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/chapter_summaries.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/current_focus.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/current_state.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/outline/story_frame.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/outline/volume_map.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/pending_hooks.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/assets/book-skeleton/story/style_guide.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/dashboard-todo.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/file-contract.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/workflow-continue.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/workflow-dashboard.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/workflow-import.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/workflow-new-book.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/workflow-redirect.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/references/workflow-rewrite.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/build_dashboard.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/init_book.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/quality_check.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/rebuild_index.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/rollback_book.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/select_audit.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/snapshot_book.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/scripts/validate_book.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/artifacts/build_size.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/artifacts/quality_check.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/book.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/chapters/0001_入门.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/chapters/0002_初遇.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/chapters/index.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/audit-drift.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/author_intent.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/book_rules.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/chapter_summaries.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/current_focus.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/current_state.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/outline/story_frame.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/outline/volume_map.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/pending_hooks.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/roles/major/苏霜.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/roles/major/陆恒.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/roles/minor/林逸.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/snapshots/0000/manifest.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/fixtures/standard-book/story/style_guide.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/js/test_dashboard.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/js/test_integration.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/tests/test_contract.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dragon-writer/todo.md" afterDir="false" />
+    <list default="true" id="58e3aec4-34c3-4a26-855e-308e09cc9a7b" name="Changes" comment="feat：v3">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dragon-writer/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dragon-writer/SKILL.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/SKILL.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/agents/openai.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/agents/openai.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/audit-dimensions.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/references/audit-dimensions.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/assets/dashboard.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/file-contract.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/references/file-contract.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/tb-chars.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/tb-overview.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/tb-read.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/tb-settings-content.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/tb-settings.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/templates.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/references/templates.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/test-1-landing.png" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/tests/artifacts/test-1-landing.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/test-2-after-pick.png" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/tests/artifacts/test-2-after-pick.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dragon-writer/references/workflow.md" beforeDir="false" afterPath="$PROJECT_DIR$/dragon-writer/references/workflow.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -189,7 +122,15 @@
       <option name="project" value="LOCAL" />
       <updated>1784471064086</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="feat：v3">
+      <option name="closed" value="true" />
+      <created>1785673547295</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1785673547295</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -222,6 +163,7 @@
     <MESSAGE value="feat：v1" />
     <MESSAGE value="feat：v2" />
     <MESSAGE value="feat：v2.2" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat：v2.2" />
+    <MESSAGE value="feat：v3" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat：v3" />
   </component>
 </project>

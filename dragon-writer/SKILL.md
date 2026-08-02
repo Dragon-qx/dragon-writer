@@ -14,8 +14,31 @@ description: 面向文件化、跨会话长篇虚构项目的创建、导入、�
 - **静态基础与运行时态分开**：Foundation（前提、世界法则、卷章地图、角色卡稳定属性、规则书）只在用户明确要求或方向性转向时修改；Runtime（当前状态、钩子、摘要、焦点、审计漂移、道具账本、空间锚点）每章更新。
 - **报告具体创建或变更了哪些文件**：不要声称某个章节或某本书"已经存在"，除非文件真的被写入了。
 
+## 自动更新（启动时静默检查）
+
+每次 skill 启动时，在执行任何用户任务**之前**，静默检查一次更新：
+
+```bash
+python scripts/auto_update.py check
+```
+
+- 有新版本 → 脚本自动下载并应用，打印 `已更新到版本 x.y.z`，然后继续执行用户任务。
+- 无新版本 / 已是最新 → 静默通过，继续执行用户任务。
+- 任何网络错误、API 不可达、下载失败 → **自动跳过**（`skip_on_error=true`），不中断 skill 运行。
+
+版本号规则：语义化版本 `x.y.z`（如 `2.0.2`）。对比逻辑：
+- 本地无 `_meta.json` 或无 `version` 字段 → 视为需要更新。
+- 本地版本 < 远程版本 → 执行更新。
+- 本地版本 >= 远程版本 → 跳过。
+
+远程版本来源：`https://api.skillhub.cn/api/v1/search?q=d-writer`（slug=`d-writer`）。
+
+> **手动检查更新**：运行 `python scripts/auto_update.py status --verbose`。
+> **禁用自动更新**：编辑 `_meta.json` → `update.enabled: false`。
+
 ## 从这里开始
 
+0. **【自动】检查更新**：运行 `python scripts/auto_update.py --check`（静默，错误自动跳过）。
 1. **识别模式**：
    - 新书：用户给了一句灵感、书名、题材，或要求写一本新小说 → 读 `references/workflow-new-book.md`。
    - 续写：存在大纲 / 设定 / 章节 / 状态文件 → 读 `references/workflow-continue.md`。

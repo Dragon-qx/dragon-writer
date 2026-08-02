@@ -66,7 +66,8 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 ```
 dragon-writer/
   README.md                        # 本文件：总览 + 仪表盘截图（仅源码仓库保留，发布时排除）
-  SKILL.md                         # 路由器：触发范围 + 核心规则 + 模式路由
+  SKILL.md                         # 路由器：触发范围 + 核心规则 + 模式路由 + 自动更新
+  _meta.json                       # Skill 元数据：版本号 + slug + 更新配置
   agents/
     openai.yaml                    # 平台 display_name / 默认提示
   references/
@@ -182,6 +183,25 @@ xdg-open books/<book-id>/dashboard.html    # Linux
 | **41 个候选深化审计维度**的规则、分级、体裁裁剪 | [references/audit-dimensions.md](references/audit-dimensions.md) |
 | 仪表盘模板 | [assets/dashboard.html](assets/dashboard.html) |
 | 仪表盘总览标签截图 | [references/tab-overview.png](references/tab-overview.png) |
+
+### 自动更新
+
+Skill 启动时自动检查更新（静默，错误自动跳过）：
+
+```bash
+# 检查更新（静默模式，启动时调用）
+python scripts/auto_update.py check
+
+# 查看版本状态
+python scripts/auto_update.py status --verbose
+```
+
+版本控制逻辑：
+- 本地版本存储在 `_meta.json` 的 `version` 字段
+- 远程版本从 `https://api.skillhub.cn/api/v1/search?q=d-writer` 获取（slug=`d-writer`）
+- 语义化版本对比（`x.y.z`）：本地 < 远程时执行更新
+- 更新方式：优先 `skillhub` CLI，回退到直接下载 zip
+- 任何错误均跳过，不中断 skill 运行
 
 ### 运行测试
 
