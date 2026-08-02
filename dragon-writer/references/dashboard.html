@@ -1,55 +1,140 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<!--
-  Dragon Writer 仪表盘 —— 运行时模板。
-  本文件是模板：由 skill 在创建/导入书时生成到书文件夹（仅生成一次）。
-  打开后通过 File System Access API（或 webkitdirectory 回退）选择/重连书文件夹，
-  运行时读取书源文件、实时计算并渲染。不嵌入任何数据，永远反映最新文件。
--->
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Dragon Writer · 写作仪表盘</title>
 <style>
-  :root{--bg:#f6f5f1;--bg-elevated:#ffffff;--bg-subtle:#efeae1;--text:#1c1b18;--text-muted:#6b6760;--border:#e0dcd4;--accent:#b5651d;--accent-soft:#f0e4d2;--success:#4a7c59;--track:#e7e3db;--card-shadow:0 1px 2px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.04);--radius:12px;--mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;--serif:"Songti SC","Noto Serif SC","Source Han Serif SC",Georgia,serif;--sans:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif}
-  @media(prefers-color-scheme:dark){:root.theme-auto{--bg:#161513;--bg-elevated:#1f1d1a;--bg-subtle:#26241f;--text:#ece7df;--text-muted:#9b9488;--border:#33302a;--accent:#d99a4e;--accent-soft:#3a2f1e;--success:#6fae80;--track:#2d2a25;--card-shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35)}}
-  :root.theme-dark{--bg:#161513;--bg-elevated:#1f1d1a;--bg-subtle:#26241f;--text:#ece7df;--text-muted:#9b9488;--border:#33302a;--accent:#d99a4e;--accent-soft:#3a2f1e;--success:#6fae80;--track:#2d2a25;--card-shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35)}
-  *{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
-  button{font-family:inherit;cursor:pointer;background:var(--bg-subtle);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:14px;transition:background .15s,border-color .15s}button:hover{background:var(--border)}button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}button.primary:hover{filter:brightness(.95)}
-  #landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:20px;text-align:center;padding:24px}#landing h1{font-family:var(--serif);font-size:30px;margin:0;letter-spacing:.02em}#landing p{color:var(--text-muted);max-width:460px;margin:0}#landing .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}#landing .hint{font-size:13px;max-width:500px}#landing code{background:var(--bg-subtle);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12px}input[type=file]{display:none}label.filelabel{display:inline-block}
-  #app{display:none;min-height:100vh}body.loaded #landing{display:none}body.loaded #app{display:grid}
-  header.appbar{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--bg-elevated);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}header.appbar .bookmeta{display:flex;align-items:baseline;gap:10px;min-width:0}header.appbar .booktitle{font-family:var(--serif);font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}header.appbar .booksub{color:var(--text-muted);font-size:13px;white-space:nowrap}header.appbar .spacer{flex:1}header.appbar .badge{background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
-  .layout{display:grid;grid-template-columns:188px 1fr;min-height:calc(100vh - 53px)}
-  nav.tabs{border-right:1px solid var(--border);background:var(--bg-elevated);padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:53px;align-self:start;height:calc(100vh - 53px)}nav.tabs button{text-align:left;border:none;background:transparent;border-radius:8px;padding:10px 12px;color:var(--text-muted)}nav.tabs button:hover{background:var(--bg-subtle);color:var(--text)}nav.tabs button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}nav.tabs .navlabel{font-size:11px;letter-spacing:.08em;color:var(--text-muted);padding:14px 12px 6px}
-  main.content{padding:28px 32px 60px;max-width:1100px;width:100%}.panel{display:none}.panel.active{display:block}.panel h2{font-family:var(--serif);font-size:24px;margin:0 0 4px}.panel .lede{color:var(--text-muted);margin:0 0 24px}
-  .card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--card-shadow);padding:20px}.grid{display:grid;gap:16px}.grid.stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.stat .label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}.stat .value{font-family:var(--serif);font-size:26px;font-weight:600;margin-top:4px}.stat .value small{font-size:14px;color:var(--text-muted);font-weight:400}
-  .progress-wrap{margin:4px 0 20px}.progress-bar{height:8px;background:var(--track);border-radius:999px;overflow:hidden}.progress-bar>span{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .5s ease}.progress-head{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px}.progress-head .pct{color:var(--accent);font-weight:600}
-  .ringwrap{display:flex;align-items:center;gap:28px;flex-wrap:wrap}.ring{--p:0;width:130px;height:130px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p) * 1%),var(--track) 0);display:grid;place-items:center;position:relative}.ring::before{content:"";position:absolute;inset:11px;background:var(--bg-elevated);border-radius:50%}.ring .num{position:relative;font-family:var(--serif);font-size:26px;font-weight:600;z-index:1}.ring .num .pct-sym{font-size:13px;color:var(--text-muted);font-weight:400}.ringcaption{font-size:13px;color:var(--text-muted)}.ringcaption strong{color:var(--text);font-size:15px}
-  .domain{margin-bottom:18px}.domain>.row{display:flex;align-items:center;gap:10px;cursor:pointer}.domain>.row .name{font-weight:600}.domain>.row .pct{margin-left:auto;font-size:13px;color:var(--text-muted)}.domain ul{list-style:none;margin:10px 0 0;padding:0 0 0 6px;display:none}.domain.open ul{display:block}.domain li{font-size:13px;color:var(--text-muted);padding:2px 0}.domain li.ok{color:var(--success)}.domain li::before{content:"○ "}.domain li.ok::before{content:"● "}.chev{transition:transform .15s;color:var(--text-muted);font-size:11px}.domain.open .chev{transform:rotate(90deg)}
-  .char-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}.charcard{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:border-color .15s}.charcard:hover{border-color:var(--accent)}.charcard .name{font-family:var(--serif);font-size:16px;font-weight:600}.charcard .tier{font-size:11px;color:var(--accent);margin-bottom:6px}.charcard .kv{font-size:12px;color:var(--text-muted);line-height:1.7}.charcard .kv b{color:var(--text);font-weight:600;display:inline-block;width:1.4em;text-align:center;margin-right:6px}
-.graphwrap{display:flex;gap:16px;align-items:stretch;min-height:440px}
-.graphwrap .gfx{position:relative;flex:1 1 auto;min-width:0}
-#graph{width:100%;height:440px;background:var(--bg-subtle);border-radius:var(--radius);border:1px solid var(--border);display:block;touch-action:none}
-.graphwrap .info{flex:0 0 300px;max-width:300px;background:var(--bg-subtle);border-radius:var(--radius);border:1px solid var(--border);border-left:3px solid var(--accent);padding:16px 18px;overflow:auto;align-self:start;max-height:440px;position:sticky;top:70px}
-.graphwrap .info .name{font-family:var(--serif);font-size:20px;font-weight:600;margin:2px 0 8px}
-.graphwrap .info .tier{font-size:11px;color:var(--accent);background:var(--accent-soft);display:inline-block;padding:2px 10px;border-radius:999px;margin-bottom:12px}
-.graphwrap .info dl{margin:0}
-.graphwrap .info dt{font-size:12px;font-weight:600;color:var(--text);margin:12px 0 4px;scroll-margin-top:70px}
-.graphwrap .info dt:first-child{margin-top:0}
-.graphwrap .info dd{margin:0;font-size:13px;color:var(--text-muted);line-height:1.7}
-.graphwrap .info .rels{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}
-.graphwrap .info .rels .rname{color:var(--accent);font-weight:600}
-.graphwrap .info .empty{color:var(--text-muted);font-size:13px;line-height:1.7}
-@media(max-width:820px){.graphwrap{flex-direction:column}.graphwrap .info{flex:0 0 auto;max-width:none;max-height:none;position:static}}
-  .reader{display:grid;grid-template-columns:240px 1fr;gap:20px;min-height:60vh}.toc{border-right:1px solid var(--border);position:sticky;top:70px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}.toc .toc-title{font-size:12px;color:var(--text-muted);letter-spacing:.06em;padding:4px 8px 10px}.toc button{display:block;width:100%;text-align:left;border:none;background:transparent;border-radius:6px;padding:8px 10px;color:var(--text-muted);font-size:13px}.toc button:hover{background:var(--bg-subtle);color:var(--text)}.toc button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}.toc button .ch-no{font-family:var(--mono);font-size:11px;display:block;opacity:.7}
-  .article{max-width:700px;font-family:var(--serif);font-size:17px;line-height:1.85;color:var(--text)}.article h1{font-size:26px;line-height:1.4;margin:0 0 8px}.article h2{font-size:20px;margin:1.6em 0 .5em}.article h3{font-size:17px;margin:1.4em 0 .4em}.article p{margin:.7em 0}.article blockquote{border-left:3px solid var(--accent);margin:1em 0;padding:.2em 1em;color:var(--text-muted);background:var(--accent-soft);border-radius:0 6px 6px 0}.article ul,.article ol{padding-left:1.4em;margin:.6em 0}.article li{margin:.25em 0}.article code{background:var(--bg-subtle);padding:2px 5px;border-radius:4px;font-family:var(--mono);font-size:.85em}.article pre{background:var(--bg-subtle);border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6}.article pre code{background:none;padding:0}.article table{border-collapse:collapse;margin:1em 0;font-size:14px;width:100%}.article th,.article td{border:1px solid var(--border);padding:6px 10px;text-align:left}.article th{background:var(--bg-subtle);font-family:var(--sans)}.article hr{border:none;border-top:1px solid var(--border);margin:1.6em 0}.article a{color:var(--accent)}
-  .readnav{display:flex;justify-content:space-between;margin-top:28px;gap:12px}.readnav button{flex:1}.readnav button:disabled{opacity:.4;cursor:not-allowed}
-  .empty{text-align:center;color:var(--text-muted);padding:40px 20px}.muted{color:var(--text-muted)}.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.section-title{font-size:13px;letter-spacing:.06em;color:var(--text-muted);margin:28px 0 12px}
-  .settingfile{margin-bottom:16px}.settingfile>.row{display:flex;align-items:center;gap:10px;cursor:pointer}.settingfile>.row .name{font-weight:600}.settingfile>.row .pct{margin-left:auto;font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums}.settingfile .body{display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px}.settingfile.open .body{display:block}.settingfile .article{font-size:16px}.settingfile .tag{font-size:11px;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:999px}
-  @media(max-width:820px){.layout{grid-template-columns:1fr}nav.tabs{position:static;flex-direction:row;flex-wrap:wrap;height:auto}.reader{grid-template-columns:1fr}.toc{position:static;border-right:none;border-bottom:1px solid var(--border);max-height:200px}main.content{padding:20px 16px 60px}.col2{grid-template-columns:1fr}}
+/* ========== CSS 变量系统 ========== */
+:root {
+  --bg: #f6f5f1;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #efeae1;
+  --text: #1c1b18;
+  --text-muted: #6b6760;
+  --border: #e0dcd4;
+  --accent: #b5651d;
+  --accent-soft: #f0e4d2;
+  --success: #4a7c59;
+  --danger: #b53b3b;
+  --warning: #c97d2b;
+  --track: #e7e3db;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+  --mono: ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  --serif: "Songti SC","Noto Serif SC","Source Han Serif SC",Georgia,serif;
+  --sans: -apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  --font-size-base: 14px;
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+}
+@media(prefers-color-scheme:dark) {
+  :root.theme-auto {
+    --bg: #161513; --bg-elevated: #1f1d1a; --bg-subtle: #26241f;
+    --text: #ece7df; --text-muted: #9b9488; --border: #33302a;
+    --accent: #d99a4e; --accent-soft: #3a2f1e; --success: #6fae80;
+    --track: #2d2a25; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+  }
+}
+:root.theme-dark {
+  --bg: #161513; --bg-elevated: #1f1d1a; --bg-subtle: #26241f;
+  --text: #ece7df; --text-muted: #9b9488; --border: #33302a;
+  --accent: #d99a4e; --accent-soft: #3a2f1e; --success: #6fae80;
+  --track: #2d2a25; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+}
+:root.theme-light {
+  --bg: #f6f5f1; --bg-elevated: #ffffff; --bg-subtle: #efeae1;
+  --text: #1c1b18; --text-muted: #6b6760; --border: #e0dcd4;
+  --accent: #b5651d; --accent-soft: #f0e4d2; --success: #4a7c59;
+  --track: #e7e3db; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+}
+
+/* ========== Reset ========== */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;font-size:var(--font-size-base)}
+
+/* ========== 按钮 ========== */
+button{font-family:inherit;cursor:pointer;background:var(--bg-subtle);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:var(--font-size-base);transition:background var(--transition-fast),border-color var(--transition-fast)}
+button:hover{background:var(--border)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.primary:hover{filter:brightness(.95)}
+input[type=file]{display:none}
+label.filelabel{display:inline-block}
+
+/* ========== 落地页 ========== */
+#landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:20px;text-align:center;padding:24px}
+#landing h1{font-family:var(--serif);font-size:30px;margin:0;letter-spacing:.02em}
+#landing p{color:var(--text-muted);max-width:460px;margin:0}
+#landing .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+#landing .hint{font-size:13px;max-width:500px}
+#landing code{background:var(--bg-subtle);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12px}
+#resumeArea{margin-top:12px}
+#resumeArea p{margin:6px 0}
+#resumeArea .hint{font-size:13px;color:var(--text-muted)}
+#recentBooks{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+
+/* ========== Loading ========== */
+.loading{display:flex;align-items:center;gap:10px;color:var(--text-muted)}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ========== Layout Grid ========== */
+#app{display:none;min-height:100vh}
+body.loaded #landing{display:none}
+body.loaded #app{display:grid;grid-template-rows:auto 1fr}
+.layout{display:grid;grid-template-columns:180px 1fr}
+
+/* ========== Appbar ========== */
+.appbar{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--bg-elevated);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.appbar .bookmeta{display:flex;align-items:baseline;gap:10px;min-width:0}
+.appbar .booktitle{font-family:var(--serif);font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appbar .booksub{color:var(--text-muted);font-size:13px;white-space:nowrap}
+.appbar .spacer{flex:1}
+.appbar .badge{background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
+
+/* ========== Tabs ========== */
+.tabs[role="tablist"]{border-right:1px solid var(--border);background:var(--bg-elevated);padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:53px;align-self:start;height:calc(100vh - 53px)}
+.tabs button[role="tab"]{text-align:left;border:none;background:transparent;border-radius:var(--radius-sm);padding:10px 12px;color:var(--text-muted);font-size:var(--font-size-base);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.tabs button[role="tab"]:hover{background:var(--bg-subtle);color:var(--text)}
+.tabs button[role="tab"][aria-selected="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.tabs .navlabel{font-size:11px;letter-spacing:.08em;color:var(--text-muted);padding:14px 12px 6px;text-transform:uppercase}
+
+/* ========== Content ========== */
+main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
+.panel{display:none}
+.panel.active{display:block}
+.panel h2{font-family:var(--serif);font-size:24px;margin:0 0 4px}
+.panel .lede{color:var(--text-muted);margin:0 0 24px}
+
+/* ========== 基本组件 ========== */
+.card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+.grid{display:grid;gap:16px}
+.grid.stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.empty-state{text-align:center;color:var(--text-muted);padding:40px 20px}
+.empty-state .icon{font-size:40px;margin-bottom:12px}
+.stat .label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.stat .value{font-family:var(--serif);font-size:26px;font-weight:600;margin-top:4px}
+.stat .value small{font-size:14px;color:var(--text-muted);font-weight:400}
+.muted{color:var(--text-muted)}
+.section-title{font-size:13px;letter-spacing:.06em;color:var(--text-muted);margin:28px 0 12px}
+.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ========== Responsive ========== */
+@media(max-width:820px) {
+  .layout{grid-template-columns:1fr}
+  .tabs[role="tablist"]{flex-direction:row;flex-wrap:wrap;height:auto;position:static}
+  main.content{padding:20px 16px 60px}
+  .col2{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
+
 <!-- ============ 落地页 ============ -->
 <div id="landing">
   <h1>🐉 Dragon Writer · 写作仪表盘</h1>
@@ -57,13 +142,20 @@
   <div class="row">
     <button class="primary" id="pickBtn">📖 选择书架文件夹</button>
     <label class="filelabel">
-      <input type="file" id="fileInput" webkitdirectory directory multiple/>
+      <input type="file" id="fileInput" webkitdirectory>
       <button type="button" id="compatBtn">📂 兼容模式选择</button>
     </label>
-    <button id="refreshBtn" title="用上次选中的文件夹重新读取" style="display:none;">🔄 刷新</button>
+    <button id="refreshBtn" style="display:none">🔄 刷新</button>
   </div>
-  <p class="hint">推荐 Chrome / Edge 使用上方主按钮（File System Access API）。如浏览器不支持，请用"兼容模式选择"。所有数据均在本地读取，不会上传到任何服务器。</p>
-  <p class="hint" id="resumeHint" style="display:none;">上次打开：<span id="resumeName" style="color:var(--accent);"></span> · <a href="#" id="resumeLink" style="color:var(--accent);">点此继续</a></p>
+  <div id="resumeArea" style="display:none">
+    <p>上次打开：<span id="resumeName"></span> · <a href="#" id="resumeLink">点此继续</a></p>
+    <p class="hint">或者从下方列表选择其他书：</p>
+    <div id="recentBooks"></div>
+  </div>
+  <div id="loadingIndicator" class="loading" style="display:none">
+    <div class="spinner"></div>
+    <span>正在加载书源文件...</span>
+  </div>
 </div>
 
 <!-- ============ 应用主体 ============ -->
@@ -79,68 +171,34 @@
     <button id="themeBtn" title="切换主题">🌙</button>
   </header>
   <div class="layout">
-    <nav class="tabs">
+    <nav class="tabs" role="tablist">
       <div class="navlabel">视图</div>
-      <button data-tab="overview" class="active">📊 总览</button>
-      <button data-tab="settings">📐 设定完成度</button>
-      <button data-tab="settings-content">📜 设定内容</button>
-      <button data-tab="chars">👥 人物关系</button>
-      <button data-tab="read">📖 阅读章节</button>
+      <button role="tab" aria-selected="true" data-tab="overview">📊 总览</button>
+      <button role="tab" aria-selected="false" data-tab="settings">📐 设定完成度</button>
+      <button role="tab" aria-selected="false" data-tab="settings-content">📜 设定内容</button>
+      <button role="tab" aria-selected="false" data-tab="chars">👥 人物关系</button>
+      <button role="tab" aria-selected="false" data-tab="read">📖 阅读章节</button>
     </nav>
     <main class="content">
-      <section class="panel active" id="panel-overview">
+      <section class="panel active" id="panel-overview" role="tabpanel">
         <h2>总览</h2>
         <p class="lede">本书当前的写作进度与最新状态。</p>
-        <div class="card" style="margin-bottom:20px;">
-          <div class="ringwrap">
-            <div class="ring" id="ring"><span class="num"><span id="ringPct">0</span><span class="pct-sym">%</span></span></div>
-            <div>
-              <div class="ringcaption">已完成 <strong id="ovDone">0</strong> / <strong id="ovTarget">0</strong> 章</div>
-              <div class="ringcaption">约 <strong id="ovWords">0</strong> 字 / 目标单章 <strong id="ovChWords">0</strong> 字</div>
-              <div class="ringcaption muted" id="ovUpdated"></div>
-            </div>
-          </div>
-        </div>
-        <div class="grid stats" id="statGrid"></div>
-        <div class="section-title">当前状态</div>
-        <div class="grid col2" id="stateGrid"></div>
-        <div class="section-title">最近章节</div>
-        <div id="recentChapters" class="card"></div>
-        <div class="section-title">审计漂移</div>
-        <div id="auditDrift" class="card"></div>
       </section>
-      <section class="panel" id="panel-settings">
+      <section class="panel" id="panel-settings" role="tabpanel">
         <h2>设定完成度</h2>
         <p class="lede">基于书源文件中各子章节的填充情况自动计算。展开可逐项查看。</p>
-        <div id="settingsList"></div>
       </section>
-      <section class="panel" id="panel-settings-content">
+      <section class="panel" id="panel-settings-content" role="tabpanel">
         <h2>设定内容</h2>
         <p class="lede">全部设定文件的完整原文，可在仪表盘内直接阅读。</p>
-        <div id="settingsContent"></div>
       </section>
-      <section class="panel" id="panel-chars">
+      <section class="panel" id="panel-chars" role="tabpanel">
         <h2>人物关系</h2>
         <p class="lede">点击节点查看角色详情。节点颜色区分主要 / 次要角色。</p>
-        <div class="section-title">关系图</div>
-        <div class="graphwrap card" style="padding:10px;margin-bottom:20px;">
-          <div class="gfx"><canvas id="graph"></canvas></div>
-          <aside class="info" id="graphInfo">
-            <div class="empty">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>
-          </aside>
-        </div>
-        <div class="section-title">角色列表</div>
-        <div class="char-list" id="charList"></div>
       </section>
-      <section class="panel" id="panel-read">
+      <section class="panel" id="panel-read" role="tabpanel">
         <h2>阅读章节</h2>
         <p class="lede">在仪表盘内直接阅读任意章节。</p>
-        <div class="reader">
-          <nav class="toc" id="toc"><div class="toc-title">目录</div></nav>
-          <article class="article" id="article"><div class="empty">← 请从左侧目录选择一章</div></article>
-        </div>
-        <div class="readnav"><button id="prevBtn">‹ 上一章</button><button id="nextBtn">下一章 ›</button></div>
-        <div style="margin-top:12px;"><button id="exportBtn">📤 导出全本 TXT</button><span class="muted" style="font-size:13px;margin-left:10px;">按章节顺序合并为单一 txt 文件</span></div>
       </section>
     </main>
   </div>
@@ -244,7 +302,6 @@ async function readTextFromEntries(entries, relPath) {
 async function collectRoles(handle, entries) {
   const roles = [];
   if (handle) {
-    // 递归找出所有 .md 文件，再按 roles/(major|minor|...) 路径归类
     const ROLE_RE = /roles\/(?:major|minor|主要角色|次要角色)\/(.+?\.(?:md|MD))$/;
     async function walk(dir, prefix) {
       for await (const [name, h] of dir.entries()) {
@@ -293,7 +350,6 @@ async function collectChapters(handle, entries) {
   return out;
 }
 
-// 列出一级目录内容，用于诊断"用户选了哪一层"
 async function listTopLevel(handle, entries) {
   try {
     if (handle) {
@@ -310,7 +366,6 @@ async function listTopLevel(handle, entries) {
 }
 
 async function validateBookDir(handle, entries) {
-  // 必需：book.json 和 chapters/；read 失败视为"找不到"，不抛异常
   const missing = [];
   let bookJson = null;
   try {
@@ -354,9 +409,7 @@ async function loadBook(handle, entries) {
     await render();
   } catch (err) {
     console.error(err);
-    // 启动时的静默自动重连失败：不弹提示，停留落地页等待用户手动选
     if (autoResumed) return;
-    // 永远展示中文友好提示，不泄露浏览器原生的外文异常文本
     const friendly =
       err && err.message && !err.message.includes("could not be found") && !err.message.includes("be found at the time")
         ? err.message
@@ -388,6 +441,7 @@ const IDB = (() => {
   }
   return { save, load };
 })();
+const idbSave = IDB.save;
 
 /* ---------- 按嵌入数据计算的各文件解析函数 ---------- */
 function sectionLines(text, re){
@@ -398,8 +452,6 @@ function sectionLines(text, re){
 }
 function sectionOf(text, re){ return sectionLines(text, re).slice(0, 6).join("；"); }
 
-// 列表式角色档案里的精准字段提取：从 `- **标签**：内容` 行里按标签关键字精确匹配某一条，避免
-// "## 欲望·恐惧·创伤" 这种联合标题造成 sectionOf() 一次把多段内容整块吞并（造成不同字段显示完全相同内容）。
 function roleField(text, labels){
   if (!text) return "";
   const labelList = (Array.isArray(labels) ? labels : [labels]).map(s => String(s).toLowerCase());
@@ -434,7 +486,7 @@ function calcSettingsCompletion(files){
   return out;
 }
 function renderAuditDrift(text){
-  if (!text || !text.trim()) return `<div class="empty">暂无审计漂移记录</div>`;
+  if (!text || !text.trim()) return `<div class="empty-state">暂无审计漂移记录</div>`;
   const html = (title, body) => {
     const items = body.split(/\n###\s+/).filter(Boolean);
     if (!items.length) return "";
@@ -507,12 +559,12 @@ async function render(){
   $("statGrid").innerHTML = stats.map(([l,v]) => `<div class="stat card"><div class="label">${l}</div><div class="value">${v}</div></div>`).join("");
   $("stateGrid").innerHTML = parseCurrentState(data.files.current_state)
     ? `<div class="card" style="grid-column:1/-1;">${parseCurrentState(data.files.current_state)}</div>`
-    : `<div class="card empty" style="grid-column:1/-1;">未找到 current_state.md</div>`;
+    : `<div class="card empty-state" style="grid-column:1/-1;">未找到 current_state.md</div>`;
   const recents = parseRecentSummaries(data.files.chapter_summaries);
   $("recentChapters").innerHTML = recents.length
     ? `<table><thead><tr><th>章</th><th>标题</th><th>角色</th><th>事件</th><th>心境</th></tr></thead><tbody>` +
       recents.slice().reverse().map(r => `<tr><td style="font-family:var(--mono)">${escHtml(r.ch)}</td><td>${escHtml(r.title||"—")}</td><td class="muted">${escHtml(r.chars||"—")}</td><td class="muted">${escHtml(r.events||"—")}</td><td class="muted">${escHtml(r.mood||"—")}</td></tr>`).join("") + `</tbody></table>`
-    : `<div class="empty">暂无章节摘要</div>`;
+    : `<div class="empty-state">暂无章节摘要</div>`;
   $("auditDrift").innerHTML = renderAuditDrift(data.files.audit_drift);
 
   const completion = calcSettingsCompletion(data.files);
@@ -537,12 +589,12 @@ async function render(){
     const comp = completion.find(c => c.key === f.key);
     const pct = comp ? comp.pct : 0;
     return `<div class="card settingfile open" id="sf-${idx}">
-      <div class="row"><span class="chev">▶</span><span className="name">${escHtml(f.title)}</span>
+      <div class="row"><span class="chev">▶</span><span class="name">${escHtml(f.title)}</span>
         <span class="tag" style="margin-left:8px;">${fmtNum(countText(text))} 字</span>
         ${pct!==undefined ? `<span class="pct">${pct}% 完成</span>` : ""}</div>
       <div class="body"><div class="article">${MD.parse(text)}</div></div>
     </div>`;
-  }).join("") || `<div class="card empty">暂无设定文件</div>`;
+  }).join("") || `<div class="card empty-state">暂无设定文件</div>`;
   SETTING_FILES.filter(f => data.files[f.key]).forEach((f, idx) => {
     const el = $("sf-"+idx); el.querySelector(".row").onclick = () => { el.classList.toggle("open"); };
   });
@@ -572,8 +624,6 @@ const Graph = (() => {
     const resize = () => { const r = canvas.getBoundingClientRect(); const dpr = window.devicePixelRatio||1;
       canvas.width = r.width*dpr; canvas.height = r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); W=r.width; H=r.height; };
     resize(); window.addEventListener("resize", resize);
-    // 初次 init 时 canvas 可能仍在 display:none 的面板内，getBoundingClientRect 会返回 0×0。
-    // 用 ResizeObserver 监听画布真实尺寸，切到该 tab 时（从 0 变为实际像素）重设画布并重定位节点。
     if (typeof ResizeObserver !== "undefined") {
       let lastW = 0, lastH = 0;
       const ro = new ResizeObserver(() => {
@@ -609,7 +659,6 @@ const Graph = (() => {
     const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
     const labelColor = getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim();
     const bgSoft = getComputedStyle(document.documentElement).getPropertyValue("--bg-subtle").trim();
-    // 连线：加粗并带半透明，中点标注关系
     for(const e of edges){
       const a=nodes[e.s],b=nodes[e.t];
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
@@ -633,7 +682,7 @@ const Graph = (() => {
   function setSelect(i){
     selected=i; draw();
     const info=$("graphInfo");
-    if(i<0){ info.innerHTML='<div class="empty">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>'; return; }
+    if(i<0){ info.innerHTML='<div class="empty-state">点击图中节点或右侧角色卡片，查看该角色的故事功能、欲望 / 恐惧、当前状态与关系。</div>'; return; }
     const n=nodes[i];
     const fields=[["故事功能",n.func],["欲望",n.desire],["恐惧",n.fear],["当前状态",n.state],["弧线",n.arc],["秘密",n.secrets]].filter((a)=>a[1]);
     const rels=edges.filter(e=>e.s===i||e.t===i).map(e=>{ const o=nodes[e.s===i?e.t:e.s]; return `<div style="margin-bottom:6px"><span class="rname">${escHtml(o.name)}</span>${e.label?' — '+MD.parseInline(e.label):''}</div>`; });
@@ -673,7 +722,11 @@ $("nextBtn").onclick = () => { if(currentChapter<data.chapters.length-1) openCha
 
 /* ---------- Tab + 主题 ---------- */
 function switchTab(name){
-  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab===name));
+  document.querySelectorAll(".tabs button").forEach(b => {
+    const isActive = b.dataset.tab === name;
+    b.classList.toggle("active", isActive);
+    b.setAttribute("aria-selected", isActive);
+  });
   document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id==="panel-"+name));
   location.hash = name;
 }
@@ -697,7 +750,7 @@ async function pickFolder() {
       $("resumeName").textContent = handle.name;
       autoResumed = false;
       await loadBook(handle, null);
-    } catch (e) { if (e && e.name === "AbortError") return; /* loadBook 已弹提示 */ }
+    } catch (e) { if (e && e.name === "AbortError") return; }
   } else { $("fileInput").click(); }
 }
 $("pickBtn").onclick = pickFolder;
@@ -746,10 +799,9 @@ $("exportBtn").onclick = () => {
   try {
     const h = await IDB.load("last");
     if (!h) return;
-    $("resumeHint").style.display = "block";
+    $("resumeArea").style.display = "block";
     $("resumeName").textContent = h.name;
     $("resumeLink").onclick = (e) => { e.preventDefault(); tryResumeSilent(h); };
-    // 自动尝试静默重连：成功则直接进入仪表盘，失败就留落地页（不弹提示）
     await tryResumeSilent(h);
   } catch (e) { /* 首次访问 / 无句柄：停留落地页 */ }
 })();
