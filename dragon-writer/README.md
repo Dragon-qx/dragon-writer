@@ -6,15 +6,15 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 
 ### ⑤ 写作仪表盘导览
 
-`references/dashboard.html` 打开即见 5 个标签页，运行时自会读取书源文件，永远反映最新内容。《霜寒之纪》示例：4/200 章、约 1265 字、4 份设定文件、7 位角色（4 主 3 次）。
+`assets/dashboard.html` 打开即见 5 个标签页，运行时自会读取书源文件，永远反映最新内容。《霜寒之纪》示例：4/200 章、约 1265 字、5 份设定文件、7 位角色（4 主 3 次）。
 
-**① 总览** —— 顶部一枚进度环，环心大字标百分比，环侧列出"已完成 N / 目标 N 章""约 N 字 / 目标单章 N 字""更新于 …"。环下 6 张统计卡（总章节、目标章节、总字数、平均章字数、单章目标、状态）。其下三块：当前状态（地点/时间、主角、已知真相…）、最近章节（章/标题/角色/事件/心境五列逆序表）、审计漂移（已修复 / 已知漂移两节）。
+**① 总览** —— 顶部一枚进度环，环心大字标百分比，环侧列出"已完成 N / 目标 N 章""约 N 字 / 目标单章 N 字""更新于 …"。环下 6 张统计卡（总章节、目标章节、总字数、平均章字数、单章目标、状态）。其下四块：当前状态（地点/时间、主角、已知真相…）、当前焦点、最近章节（章/标题/角色/事件/心境五列逆序表）、审计漂移（已修复 / 已知漂移两节）、字数趋势（柱状图）。
 
 **② 设定完成度** —— 故事框架 / 卷纲 / 规则书 / 当前状态 4 个折叠域，每域一行显示名称 + 百分比 + 进度条，点开即逐行列出子项（"○"未填 / "●"已填）。未达标的域默认展开。
 
-**③ 设定内容** —— 4 份设定文件（故事框架 / 卷纲 / 规则书 / 当前状态）各一张可展开卡片，展开后原文 Markdown 渲染全文呈现，卡片旁显示字数与完成度。
+**③ 设定内容** —— 5 份设定文件（故事框架 / 卷纲 / 规则书 / 当前状态 / 风格指南）各一张可展开卡片，展开后原文 Markdown 渲染全文呈现，卡片旁显示字数与完成度。
 
-**④ 人物关系** —— 左侧 `<canvas>` 力导向关系图：主要角色节点取主题强调色、次要角色节点取灰色，节点尺寸随连线数略增；连线中点标注关系名称（带底色气泡）。点击节点，节点描边高亮，**右侧固定信息板**同步显示该角色的故事功能、欲望、恐惧、当前状态、弧线、秘密与全部关系（对象名加粗 + 关系说明）。节点可拖拽、画布可平移。右侧下方是角色卡网格，每张卡列角色名、层级、欲/惧/今/弧四项，点击同样定位并高亮对应节点。
+**④ 人物关系** —— 左侧 `<canvas>` 力导向关系图：主要角色节点取主题强调色、次要角色节点取灰色，节点尺寸随连线数略增；连线中点标注关系名称（带底色气泡）。点击节点，节点描边高亮，**右侧固定信息板**同步显示该角色的故事功能、欲望、恐惧、当前状态、弧线、秘密与全部关系（对象名加粗 + 关系说明）。节点可拖拽。右侧下方是角色卡网格，每张卡列角色名、层级、欲/惧/今/弧四项，点击同样定位并高亮对应节点。
 
 **⑤ 阅读章节** —— 左栏竖向目录（"第 N 回 · 标题"，当前章高亮），右栏 Serif 字体渲染的 Markdown 章节正文（h1/h2/h3、blockquote、table、code/pre、list 全套样式），底栏"‹ 上一章 / 下一章 ›"导航 + "导出全本 TXT"按钮。
 
@@ -27,26 +27,27 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 | 模式 | 触发时机 | 做什么 |
 | --- | --- | --- |
 | **A · 新书** | 一句灵感 / 书名 / 题材 | 建目录、一口气产出全部基础文件骨架（意图 / 故事框架 / 卷纲 / 角色 / 规则 / 状态 / 钩子） |
-| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（9 点驻场初筛 + 四十维连续审计 · 审-改循环） → 落盘 |
+| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（9 项驻场初筛 + 41 个候选深化审计维度 · 审-改循环） → 落盘 |
 | **C · 导入** | 手里有旧章节，缺状态文件 | 从旧章反推基础文件，回放导入章节，续写 |
 | **D · 转向** | "换方向 / 下一章写 X" | 轻量调 `current_focus.md`，不改整份大纲 |
 | **E · 改写 / 修复** | 重写某一章 | **三步回滚机械**：恢复快照 → 清后续产物 → 重写 → 再走双层质检 |
-| **F · 仪表盘** | 看进度 / 关系 / 读章节 | 确保书文件夹下有模板，**双击 HTML 打开**，首次选一次文件夹后永远自动反映最新文件 |
+| **F · 仪表盘** | 看进度 / 关系 / 读章节 | 确保书文件夹下有模板，**双击 HTML 打开**，权限仍有效时自动重连（不承诺永久零交互） |
 
 ### 双层质量门禁
 
 写一章不是写完就定稿，而是过两层：
 
 1. **驻场初筛（9 点）**——主角是否按动机行动、有没有人知道不该知道的、**空间是否一致、口袋里东西有没有无痕 ±1、常识是否合理**……直接、快速。
-2. **四十维连续审计 + 审-改循环**——按体裁裁剪出本章节要跑的维度清单（仙侠默认 20–24 维），逐维出报告 → 修订 → **回头从第 1 维再过一遍**（防修 A 打坏 B） → 留痕审计漂移。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
+2. **41 个候选深化审计维度连续审计 + 审-改循环**——按体裁裁剪出本章节要跑的维度清单（仙侠默认 20–24 维），逐维出报告 → 修订 → **回头从第 1 维再过一遍**（防修 A 打坏 B） → 留痕审计漂移。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
 
 ### 写作仪表盘（双击即用）
 
-`references/dashboard.html` 是一份**运行时模板**，不嵌入任何数据。打开后通过 File System Access API 选择书文件夹（首次授权后 IndexedDB 持久化，后续零交互），运行时读源文件实时计算：
+`assets/dashboard.html` 是一份**运行时模板**，不嵌入任何数据。打开后通过 File System Access API 选择书文件夹（首次授权后 IndexedDB 持久化，权限有效时自动重连），运行时读源文件实时计算：
 
 - 写作进度（进度环、字数、完成度）
 - 设定完成度（故事框架 / 卷纲 / 规则书 / 当前状态，逐维进度条）
-- 设定内容全文（4 份设定文件可展开阅读）
+- 设定内容全文（5 份设定文件可展开阅读）
+- 当前焦点卡片
 - **人物关系图**（`<canvas>` 力导向图，可拖拽点击 + 角色卡）
 - **章节阅读**（目录 + Markdown 渲染 + 上一章 / 下一章导航）
 - 章节合并导出 TXT
@@ -64,30 +65,53 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 
 ```
 dragon-writer/
-  README.md                        # 本文件：总览 + 仪表盘截图
-  SKILL.md                         # 操作规则、各模式流程、质量门禁
+  README.md                        # 本文件：总览 + 仪表盘截图（仅源码仓库保留，发布时排除）
+  SKILL.md                         # 路由器：触发范围 + 核心规则 + 模式路由
   agents/
     openai.yaml                    # 平台 display_name / 默认提示
   references/
-    file-contract.md               # 规范布局 + 文件职责 + 权威顺序
-    templates.md                   # 全部基础文件模板（双语 heading）
-    audit-dimensions.md            # 四十维连续审计：判定规则 + 分级 + 体裁裁剪
-    workflow.md                    # 5 种模式的详细步骤
-    dashboard.html                 # 运行时仪表盘模板（零嵌入数据）
-    dashboard.png                  # 仪表盘截图（README 引用）
-books/
-  <book-id>/                       # 一本书
-    book.json
-    dashboard.html                 # 模式 F 注入的模板（仅一份）
-    chapters/{index.json, 0001_*.md}
-    story/
-      author_intent.md / current_focus.md / book_rules.md
-      current_state.md / pending_hooks.md / chapter_summaries.md
-      audit-drift.md / style_guide.md
-      outline/{story_frame.md, volume_map.md}
-      roles/{major, minor}/<name>.md
-      runtime/{chapter-NNNN.intent.md, *.rewrite.md}
-      snapshots/{0..N}/
+    file-contract.md               # 规范布局 + 文件职责 + 权威顺序 + 事务流程 + 快照契约 + Schema
+    file-contract.json             # 机器可读文件契约（canonical + aliases + required + consumer）
+    templates.md                   # 全部基础文件模板（含新增模板）
+    audit-dimensions.md            # 41 维：判定规则 + 分级 + 体裁裁剪 + 四态结果 + 风险驱动 + 维度边界
+    workflow.md                    # 路由到各模式文件
+    workflow-new-book.md           # 模式 A：创建新书
+    workflow-continue.md           # 模式 B：续写
+    workflow-import.md             # 模式 C：导入并续写
+    workflow-redirect.md           # 模式 D：转向
+    workflow-rewrite.md            # 模式 E：改写 / 修复
+    workflow-dashboard.md          # 模式 F：仪表盘
+  assets/
+    dashboard.html                 # 运行时仪表盘模板（零嵌入数据，构建产物）
+    book-skeleton/                 # 书籍骨架（init_book 直接复制）
+  scripts/
+    init_book.py                   # 创建新书
+    validate_book.py               # 验证书籍完整性
+    rebuild_index.py               # 重建章节 index
+    snapshot_book.py               # 创建 / 验证快照
+    rollback_book.py               # 安全回滚
+    select_audit.py                # 选择激活的审计维度
+    build_dashboard.py             # 构建 self-contained dashboard（内联契约 + 质量检查）
+    quality_check.py               # 静态质量检查（语法 / no-undef / CSP / 大小）
+  tests/
+    test_contract.py               # Python 文件契约测试
+    js/
+      test_dashboard.js            # Dashboard 单元测试（纯函数逻辑）
+      test_integration.js          # Dashboard 集成测试（HTML 结构 / ARIA / 函数存在性）
+    artifacts/                     # 测试产物（build_size.json / quality_check.json）
+  books/
+    <book-id>/                     # 一本书
+      book.json
+      dashboard.html               # 模式 F 注入的模板（仅一份）
+      chapters/{index.json, 0001_*.md}
+      story/
+        author_intent.md / current_focus.md / book_rules.md
+        current_state.md / pending_hooks.md / chapter_summaries.md
+        audit-drift.md / style_guide.md
+        outline/{story_frame.md, volume_map.md}
+        roles/{major, minor}/<name>.md
+        runtime/{chapter-NNNN.intent.md, *.rewrite.md}
+        snapshots/{0000..000N}/
 ```
 
 > `roles/major/` 与 `roles/minor/` 兼容中文命名 `主要角色/` 与 `次要角色/`。
@@ -137,7 +161,7 @@ open   books/<book-id>/dashboard.html       # macOS
 xdg-open books/<book-id>/dashboard.html    # Linux
 ```
 
-首次选择书文件夹并授权；以后打开即自动重连（句柄记入 IndexedDB），永远显示最新内容。推荐 **Chrome / Edge**。
+首次选择书文件夹并授权；以后打开，权限仍有效时自动重连（句柄记入 IndexedDB），永远显示最新内容（权限失效后需用户点击授权，不承诺永久零交互）。推荐 **Chrome / Edge**。
 
 ### 前置条件
 
@@ -155,12 +179,31 @@ xdg-open books/<book-id>/dashboard.html    # Linux
 | 每种模式的具体步骤 | [references/workflow.md](references/workflow.md) |
 | 规范布局 + 文件职责 + 权威顺序 | [references/file-contract.md](references/file-contract.md) |
 | 基础文件模板（新建 / 回填时照抄） | [references/templates.md](references/templates.md) |
-| **四十维审计**的规则、分级、体裁裁剪 | [references/audit-dimensions.md](references/audit-dimensions.md) |
-| 仪表盘模板 | [references/dashboard.html](references/dashboard.html) |
-| 仪表盘截图 | [references/dashboard.png](references/dashboard.png) |
+| **41 个候选深化审计维度**的规则、分级、体裁裁剪 | [references/audit-dimensions.md](references/audit-dimensions.md) |
+| 仪表盘模板 | [assets/dashboard.html](assets/dashboard.html) |
+| 仪表盘总览标签截图 | [references/tab-overview.png](references/tab-overview.png) |
+
+### 运行测试
+
+```bash
+# Dashboard 单元测试（纯函数逻辑，30 项）
+node tests/js/test_dashboard.js
+
+# Dashboard 集成测试（HTML 结构 / ARIA / 函数存在性，38 项）
+node tests/js/test_integration.js
+
+# 构建 self-contained dashboard（内联契约 + 质量检查）
+python scripts/build_dashboard.py
+
+# 静态质量检查（语法 / no-undef / CSP / 大小，25 项）
+python scripts/quality_check.py
+
+# Python 文件契约测试
+python -m pytest tests/test_contract.py -v
+```
 
 ---
 
 ## 许可证
 
-TODO
+MIT License — 详见 [LICENSE](LICENSE)（若未随附 LICENSE 文件，默认按 MIT 许可条款授权：自由使用、修改、分发，但需保留原始许可声明，且作者不承担任何责任）。

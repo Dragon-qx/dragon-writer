@@ -2,6 +2,32 @@
 
 创建新书或回填缺失文件时使用这些模板。用户提供的事实要原样保留，不魔改。
 
+## 目录
+
+- [book.json](#bookjson)
+- [author_intent.md](#author_intentmd)
+- [current_focus.md](#current_focusmd)
+- [outline/story_frame.md](#outlinestory_framemd)
+- [outline/volume_map.md](#outlinevolume_mapmd)
+- [roles/major/<name>.md](#rolesmajornamemd)
+- [book_rules.md](#book_rulesmd)
+- [pending_hooks.md](#pending_hooksmd)
+- [current_state.md](#current_statemd)
+- [chapter_summaries.md](#chapter_summariesmd)
+- [chapters/index.json](#chaptersindexjson)
+- [audit-drift.md](#audit-driftmd)
+- [style_guide.md](#style_guidemd)
+- [fanfic_canon.md](#fanfic_canonmd)
+- [parent_canon.md](#parent_canonmd)
+- [emotional_arcs.md](#emotional_arcsmd)
+- [项目敏感内容/措辞约束](#项目敏感内容措辞约束)
+- [chapter-NNNN.intent.md](#chapter-nnnnintentmd)
+- [快照 manifest](#快照-manifest)
+- [rewrite manifest](#rewrite-manifest)
+- [章节 delta](#章节-delta)
+
+---
+
 ## book.json
 
 ```json
@@ -14,7 +40,9 @@
   "targetChapters": 200,
   "chapterWordCount": 3000,
   "createdAt": "<ISO timestamp>",
-  "updatedAt": "<ISO timestamp>"
+  "updatedAt": "<ISO timestamp>",
+  "schemaVersion": "1.0.0",
+  "skillVersion": "1.0.0"
 }
 ```
 
@@ -84,16 +112,14 @@
 
 ## roles/major/<name>.md
 
+> 角色档案**仅保存稳定属性**。易漂移的"当前关系 / 伤势 / 位置 / 能力状态"不写入档案，统一归入 `current_state.md`。
+
 ```markdown
 # <Name>
 
 ## 角色功能 Story Function
 
 ## 欲望·恐惧·创伤 Desire / Fear / Wound
-
-## 当前状态 Current State
-
-## 人物关系 Relationships
 
 ## 秘密与信息边界 Secrets And Information Boundary
 
@@ -118,31 +144,38 @@
 ## 禁手 Forbidden Moves
 
 ## 风格约束 Style Constraints
+
+## 年代约束 Era Constraints
 ```
 
 ## pending_hooks.md
 
-> 13 列账本。`status` 列直接供审计维 6（伏笔检查）按字面标记升级，
-> 停滞 / 受阻标记是 Auditor 写报告的直接证据——请保留字面 token。
+> 13+ 列账本。`lifecycle_status` 与 `health_status` 直接供审计维 6（伏笔检查）按字面标记升级，停滞 / 受阻标记是 Auditor 写报告的直接证据——请保留字面 token。
 
 ```markdown
 # Pending Hooks
 
-| hook_id | start_chapter | type | status | last_advanced_chapter | expected_payoff | payoff_timing | depends_on | core_hook | promoted | pays_off_in_arc | half_life | notes |
-| --- | ---: | --- | --- | ---: | --- | --- | --- | --- | --- | --- | ---: | --- |
-| hook-001 | 0 | premise | open | 0 |  |  |  | yes | yes | 主线·第一卷 | 10 | Initial book promise. |
+| hook_id | start_chapter | type | lifecycle_status | health_status | last_advanced_chapter | expected_payoff | payoff_timing | depends_on | blocked_on | chapters_since_advance | core_hook | promoted | pays_off_in_arc | half_life | merged_from | notes |
+| --- | ---: | --- | --- | --- | ---: | --- | --- | --- | --- | ---: | --- | --- | --- | ---: | --- | --- |
+| hook-001 | 0 | premise | open | healthy | 0 |  |  |  |  | 0 | yes | yes | 主线·第一卷 | 10 |  | Initial book promise. |
 ```
 
 列含义：
-- **status**：`open` / `progressing` / `deferred` / `resolved` + 诊断标记。停滞用 `stale (距=N)`、受阻用 `blocked on hook-X (阻=N)`（N 由 LLM 根据最近一次推进章节之差推算，字面值供 Auditor 引用）。
+- **lifecycle_status**：`open` / `progressing` / `deferred` / `resolved` / `rejected`。
+- **health_status**：`healthy` / `stale` / `blocked`。
+- **status 诊断标记**：停滞用 `stale (距=N)`、受阻用 `blocked on hook-X (阻=N)`（N 由 LLM 根据最近一次推进章节之差推算，字面值供 Auditor 引用）。
 - **promoted**（true/false）：是否从架构师种子升级为主线承重伏笔。仅 promoted=true 的 stale/blocked 才允许升到 critical。
 - **pays_off_in_arc**：计划在哪个弧线/卷回收（供审计维 6 判断结构）。
-- **depends_on**：上游 hook_id。受阻诊断依据；若上游未解决则本 hook 应为 `blocked`。
-- **half_life**（半衰期）：超过 N 章未推进时触发 info 级提醒。
+- **depends_on**：上游 hook ID（仅保存 hook ID）。
+- **blocked_on**：受阻对象（独立字段）。
+- **chapters_since_advance**：自上次推进以来经过的章节数（独立字段）。
+- **half_life**（半衰期）：超过 N 章未推进时触发 info 级提醒。stale 阈值由 half_life 确定性计算。
+- **merged_from**：合并钩子时记录来源 hook ID。
 
 **钩子治理规则**（续写时遵守）：
-- 准入/合并：新钩子若与既有 hook"同主题 + 同回收对象"→ 合并到既有 hook，不新增行。
-- 收敛：章末应将"已兑现/已推翻"的 hook 显式标 `resolved`，禁止让完成态的 hook 长期挂 `open`。
+- 准入/合并：新钩子若与既有 hook"同主题 + 同回收对象"→ 合并到既有 hook，不新增行，记录 `merged_from`。
+- 收敛：章末应将"已兑现/已推翻"的 hook 显式标 `resolved` / `rejected`，禁止让完成态的 hook 长期挂 `open`。
+- resolved 钩子保留，不删除。
 
 ## current_state.md
 
@@ -166,9 +199,9 @@
 > 以本表为"某角色在第 N 章时知道什么、不知道什么"的硬边界。
 > 续写时：角色不可引用 **起始章 > 当前章** 的事实；角色忘记已习得的事实需做显式说明。
 
-| 事实 | 人物 | 起始章 | 来源章 | 状态 |
-| --- | --- | ---: | ---: | --- |
-| 主角出身 | 主角 | 1 | 1（序章交代） | 当前为真 |
+| fact_id | statement | subject | truth_status | introduced_chapter | invalidated_chapter | source_chapter | knower | known_from_chapter | confidence | notes |
+| --- | --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- | --- |
+| fact-001 | 主角出身 | 主角 | 当前为真 | 1 | — | 1 | 主角 | 1 | 确证 | 序章交代 |
 
 ## 资源 / 伤势 / 库存 Resources / Injuries / Inventory
 
@@ -179,18 +212,18 @@
 > 审计维 39（道具追踪）的判定基础。随身物件、弹药、消耗品、贵重品逐件登记——数量与存在的变化必须由显式事件驱动（获得/失去/消耗/赠予/被夺/典当/碎裂），**不可无痕 ±1**。
 > 每章落盘时：把本章内所有"获得 / 消耗 / 丢失 / 赠予"事件对应到账本行；清零或新增行须注明事件。
 
-| prop_id | 名称 | 类别 | 数量 | 容量单位 | 归属角色 | 存放位置 | 状态 | 最近变化章 | 最近变化事件 | 备注 |
-| --- | --- | --- | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
-| prop-001 | 回春丹 | 丹药 | 3 | 枚 | 主角 | 储物袋乙格 | 完好 | 12 | 购买（散修集市） | 疗伤用，每枚止血清创 |
-| prop-002 | 青锋剑 | 法器 | 1 | 柄 | 主角 | 背上剑鞘 | 完好 | 3 | 获赠（师尊） | 下品法器 |
-| prop-003 | 下品灵石 | 货币 | 300 | 枚 | 主角 | 储物袋甲格 | — | 14 | 购买功法消耗 50 | — |
+| prop_id | 名称 | 类别 | 数量 | 容量单位 | 归属角色 | 存放位置 | 状态 | acquired_chapter | disposed_chapter | previous_owner | event_id | 最近变化章 | 最近变化事件 | 备注 |
+| --- | --- | --- | ---: | --- | --- | --- | --- | ---: | ---: | --- | --- | ---: | ---: | --- |
+| prop-001 | 回春丹 | 丹药 | 3 | 枚 | 主角 | 储物袋乙格 | active | 12 | — | — | evt-012 | 12 | 购买（散修集市） | 疗伤用，每枚止血清创 |
+| prop-002 | 青锋剑 | 法器 | 1 | 柄 | 主角 | 背上剑鞘 | active | 3 | — | — | evt-003 | 3 | 获赠（师尊） | 下品法器 |
+| prop-003 | 下品灵石 | 货币 | 300 | 枚 | 主角 | 储物袋甲格 | active | 1 | — | — | evt-001 | 14 | 购买功法消耗 50 | — |
 
-**列含义**：prop_id（项目唯一 ID）、名称（**全文统一名**，维 39 名字一致性的硬性锚点）、类别（丹药 / 法器 / 符箓 / 货币 / 信物 / 衣物 / 杂物…）、数量（整数）、容量单位（枚 / 株 / 锭 / 斛…）、归属角色、存放位置（储物袋甲格 / 袖中 / 背上剑鞘 / 洞府石床…）、状态（完好 / 封印 / 半充 / 损毁 / 耗尽…）、最近变化章、最近变化事件（谁在哪一章做了什么导致本行变化）、备注。
+**列含义**：prop_id（项目唯一 ID）、名称（**全文统一名**，维 39 名字一致性的硬性锚点）、类别（丹药 / 法器 / 符箓 / 货币 / 信物 / 衣物 / 杂物…）、数量（整数，非负）、容量单位（枚 / 株 / 锭 / 斛…）、归属角色、存放位置（储物袋甲格 / 袖中 / 背上剑鞘 / 洞府石床…）、状态（active / consumed / destroyed / lost / transferred / pawned）、acquired_chapter（获得章）、disposed_chapter（处置章）、previous_owner（前主）、event_id（数量变化必须关联显式事件）、最近变化章、最近变化事件（谁在哪一章做了什么导致本行变化）、备注。
 
 **治理规则**：
 - 新道具入章 → 准入：本行新增，最近变化章 = 本章，事件 = 来源。
 - 道具状态/数量变化 → 修改本行，不可另起同名行（防"名字漂移"）。
-- 道具消失（碎裂 / 被夺 / 赠出 / 典当 / 耗尽） → 数量归 0 或删行，事件必填。
+- 道具消失（碎裂 / 被夺 / 赠出 / 典当 / 耗尽）→ 数量归 0 或状态改为 consumed/destroyed/lost，事件必填。禁止删除账本行。
 - 消耗品（丹药 / 符箓 / 灵石）每用一次减一次——禁止"昨天吃两枚今天还有三枚"。
 
 ## 空间锚点 Spatial Anchors（场景内固定布局）
@@ -198,12 +231,12 @@
 > 审计维 38（空间一致性）的判定基础。每个反复出现的场景在本表登记一次固定布局，后续同场景跨章描写均以此为准；**物件位置变化必须有显式事件**（拆建、战损、重新布置）。
 > 新场景首次出现时建立锚点；首次返回时对账。
 
-| anchor_id | 场景名词 | 方位 / 格局 | 出入口 | 关键物件位置 | 建立章 | 最近更新章 | 备注 |
-| --- | --- | --- | --- | --- | ---: | ---: | ---: |
-| sa-001 | 青云门外门弟子舍（甲字七号） | 坐北朝南，一明一暗；明间起居、暗间卧榻 | 南向双扇门，门外青石甬道 | 东墙木案（灯盏居北）、西墙兵器架、北墙通暗间小门 | 3 | — | — |
-| sa-002 | 藏经阁三层 | 八角形中厅，八面经橱按八卦方位排列 | 仅西南角木梯通往二层 | 中厅八角石台（镇阁阵眼）、离位禁制封印铜简若干 | 7 | 21（战损：震位经橱倒塌） | — |
+| scene_id | canonical_name | aliases | coordinate_reference | 方位 / 格局 | 出入口 | 关键物件位置 | valid_from_chapter | valid_until_chapter | last_change_event | 建立章 | 最近更新章 | 备注 |
+| --- | --- | --- | --- | --- | --- | --- | ---: | ---: | --- | ---: | ---: | --- |
+| scene-001 | 青云门外门弟子舍（甲字七号） | 甲字七号 | — | 坐北朝南，一明一暗；明间起居、暗间卧榻 | 南向双扇门，门外青石甬道 | 东墙木案（灯盏居北）、西墙兵器架、北墙通暗间小门 | 3 | — | — | 3 | — | — |
+| scene-002 | 藏经阁三层 | — | — | 八角形中厅，八面经橱按八卦方位排列 | 仅西南角木梯通往二层 | 中厅八角石台（镇阁阵眼）、离位禁制封印铜简若干 | 7 | — | — | 7 | 21 | 战损：震位经橱倒塌 |
 
-**列含义**：anchor_id、场景名词（**文内统一名**，不可同地异名）、方位 / 格局（朝向 + 几进 / 几间 / 形状）、出入口（方位 + 形式）、关键物件位置（方位词 + 物件 + 相对坐标）、建立章、最近更新章（拆建 / 战损 / 布置变化时填）、备注。
+**列含义**：scene_id（稳定唯一 ID）、canonical_name（**文内统一名**，不可同地异名）、aliases（别名清单）、coordinate_reference（坐标参考，可选）、方位 / 格局（朝向 + 几进 / 几间 / 形状）、出入口（方位 + 形式）、关键物件位置（方位词 + 物件 + 相对坐标）、valid_from_chapter（生效章）、valid_until_chapter（失效章）、last_change_event（最近变更事件）、建立章、最近更新章（拆建 / 战损 / 布置变化时填）、备注。
 
 **空间一致性治理规则**：
 - **首次出场**：描写完成时即建锚点；本场景相邻段落方位不能互斥。
@@ -211,11 +244,12 @@
 - **移动合法化**：角色从 A 位置到 B 位置，描写中必须经过中间空间路径，不可瞬移（门廊 → 庭院 → 正厅）。
 - **视角合法化**：限制视角下角色看不见其位置不可能看见的内容（隔墙背面 / 遮挡物后）。
 - **视角变换 / 缩景**：大远景可改变绝对方位参考，但须在描写中明示（"从山脊回望"）。
+- **战损 / 改建 / 重布置**：保留旧版本（在 `valid_until_chapter` 标注失效章，新建一条锚点），不直接抹除历史。
 
 ## 当前冲突 Current Conflict
 ```
 
-列含义：**事实**（一句可验证的陈述）；**人物**（认知主体）；**起始章**（该角色首次获知此事实的章节，= validFrom）；**来源章**（信息最初出现的章节）；**状态**（当前为真 / 已推翻-参见第 N 章 / 仅主角知情 / 多角色共有）。该表是审计维 9（信息越界）与维 29（未来信息泄露）的判定基础。
+列含义（事实表）：**fact_id**（稳定唯一 ID）；**statement**（一句可验证的陈述）；**subject**（事实主体）；**truth_status**（当前为真 / 已推翻-参见第 N 章 / 仅主角知情 / 多角色共有）；**introduced_chapter**（该事实首次出现的章节）；**invalidated_chapter**（该事实被推翻的章节）；**source_chapter**（信息最初出现的章节）；**knower**（认知主体，一个角色一条认知记录）；**known_from_chapter**（该角色首次获知此事实的章节）；**confidence**（确证 / 推测 / unknown——缺少证据时写 unknown，不得自动补成 canon）；**notes**（备注）。该表是审计维 9（信息越界）与维 29（未来信息泄露）的判定基础。
 
 ## chapter_summaries.md
 
@@ -229,7 +263,19 @@
 ## chapters/index.json
 
 ```json
-[]
+{
+  "chapters": [
+    {
+      "number": 1,
+      "file": "0001_开篇.md",
+      "title": "开篇",
+      "status": "drafting",
+      "wordCount": 3200,
+      "createdAt": "<ISO>",
+      "updatedAt": "<ISO>"
+    }
+  ]
+}
 ```
 
 ## audit-drift.md
@@ -255,6 +301,182 @@
 - ...
 ```
 
+**审计日志压缩规则**：
+- `audit-drift.md` 只保留未解决问题、实际修复和会影响未来章节的决策。
+- 不记录所有 pass。
+- 每卷结束后将已修复历史压缩成卷级摘要。
+- 未解决 critical/warning 漂移保持完整。
+
+## style_guide.md
+
+```markdown
+# Style Guide
+
+## 语言风格 Language Style
+- 古白夹杂 / 白话 / 半文半白
+
+## 高疲劳词 Fatigue Words
+- 仿佛 / 不禁 / 宛如 / 竟然 / 忽然 / 猛地（每 3000 字不超过 1 次）
+
+## 体裁爽点类型 Satisfaction Types
+- 升级流：境界突破、越阶挑战、打脸
+
+## 视角与叙事距离 POV And Narrative Distance
+- 第三人称限制视角
+```
+
+## fanfic_canon.md
+
+> 同人模式专用。无此文件则同人专属维度（34–37）不激活。
+
+```markdown
+# Fic Canon
+
+## 原作信息 Parent Work
+- 作品名：
+- 作者：
+- 分歧点（Point of Divergence）：
+
+## 角色档案 Character Canons
+### <角色名>
+- 性格底色：
+- 语癖 / 说话风格：
+- 关键关系：
+
+## 世界规则 World Rules
+- 地理：
+- 力量体系：
+- 阵营关系：
+
+## 关键事件时间线 Canon Event Timeline
+| 事件 | 原作章节 | 时间点 |
+| --- | --- | --- |
+```
+
+## parent_canon.md
+
+> 番外模式专用。记录正典约束。
+
+```markdown
+# Parent Canon
+
+## 正典事件约束 Canon Event Constraints
+| 事件 | 发生章节 | 约束 |
+| --- | --- | --- |
+
+## 信息边界表 Information Boundary
+| 信息 | 揭示章节 | 可用角色 |
+| --- | --- | --- |
+```
+
+## emotional_arcs.md
+
+> 审计维 25（弧线平坦）的判定基础。无此文件时由 current_state + 角色档案近似替代。
+
+```markdown
+# Emotional Arcs
+
+## <主要角色名>
+| 章节 | 情绪压力形态 | 触发事件 |
+| --- | --- | --- |
+| 1 | 好奇 | 入门 |
+| 5 | 挫败 | 首次失败 |
+```
+
+## 项目敏感内容/措辞约束
+
+> 敏感内容/措辞约束**来源于用户或项目文件**，禁止模型自行发明敏感词表。文件缺失时输出 unknown/not_configured。
+
+```markdown
+# 敏感内容 / 措辞约束
+
+## 来源
+- 用户明确要求：
+- 平台安全规则：
+- 项目自身约束：
+
+## 红线清单
+- 
+
+## 措辞约束
+- 
+```
+
+## chapter-NNNN.intent.md
+
+> **每章都创建**，不仅在方向改变时创建。
+
+```markdown
+# Chapter NNNN Intent（第 NNNN 章意图）
+
+## Goal（目标）
+
+## Outline Node（大纲节点）
+
+## Current Task（当前任务）
+
+## Reader Is Waiting For（读者在等啥）
+
+## Hooks（钩子）
+- advance（要推进的）：
+- resolve（要收掉的）：
+- defer（要继续捂着的）：
+
+## Must Keep（必须保住）
+
+## Must Avoid（必须避开）
+
+## Style Emphasis（风格强调）
+
+## Required End-of-Chapter Change（章尾必须出现的改变）
+
+## Evidence Read（读过的证据）
+```
+
+## 快照 manifest
+
+> 每个快照目录下的 `manifest.json`。
+
+```json
+{
+  "snapshotVersion": "1.0.0",
+  "chapter": 1,
+  "createdAt": "<ISO 8601>",
+  "includedFiles": [
+    "current_state.md",
+    "pending_hooks.md",
+    "chapter_summaries.md",
+    "current_focus.md",
+    "audit-drift.md",
+    "chapters/index.json"
+  ],
+  "fileHashes": {
+    "current_state.md": "sha256:...",
+    "pending_hooks.md": "sha256:..."
+  },
+  "skillVersion": "1.0.0",
+  "schemaVersion": "1.0.0"
+}
+```
+
+## rewrite manifest
+
+> 存放在 `story/runtime/rewrites/<rewrite-id>/manifest.json`。
+
+```json
+{
+  "rewriteId": "rewrite-0023",
+  "sourceChapter": 23,
+  "affectedChapters": [23, 24, 25],
+  "candidateFiles": [
+    "runtime/rewrites/rewrite-0023/chapter-0023.md"
+  ],
+  "createdAt": "<ISO 8601>",
+  "status": "pending",
+  "description": "重写第 23 章，保留后续比较"
+}
+```
+
 ## 章节 delta（本章改变了什么）
 
 > 续写每章落盘前必写。这不是独立的文件——把它写进 `chapter_summaries.md`
@@ -264,3 +486,5 @@
 - **事实改变**：本章有哪些事实从"未知"→"已知"、从"假"→"真"？（更新 current_state.md 事实表行）
 - **伏笔推进**：哪些 hook 从 open→progressing、progressing→resolved？（更新 pending_hooks.md）
 - **关系状态**：关系从 X 变 Y、资源从 A 变 B、冲突从 P 变 Q？（更新 current_state.md Relationships / Resources / Conflict）
+
+写 `current_state.md` 时，优先写当前事实、少翻旧账。写 `chapter_summaries.md` 时，历史记录保持紧凑。
