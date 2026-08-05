@@ -59,16 +59,16 @@ books/<book-id>/
 
 | 角色 | 首选（canonical path） | 旧名 / 别名（alias path） |
 | --- | --- | --- |
-| 故事基础 | `story/outline/story_frame.md` | `story/story_bible.md`, `setting.md`, `world.md` |
-| 情节地图 | `story/outline/volume_map.md` | `story/volume_outline.md`, `outline.md`, `plot.md` |
-| 角色 | `story/roles/**/*.md` | `story/character_matrix.md`, `characters.md` |
-| 规则书 | `story/book_rules.md` | `rules.md`, `writing_rules.md` |
-| 作者方向 | `story/author_intent.md` | `author.md`, `intent.md` |
-| 近期焦点 | `story/current_focus.md` | `focus.md`, `next.md` |
-| 当前状态 | `story/current_state.md` | `state.md`, `truth.md` |
-| 钩子 | `story/pending_hooks.md` | `hooks.md`, `foreshadowing.md` |
-| 摘要 | `story/chapter_summaries.md` | `summaries.md` |
-| 风格指南 | `story/style_guide.md` | `style.md`, `writing_style.md` |
+| 故事基础 | `story/outline/story_frame.md` | `story/story_bible.md`, `story/setting.md`, `story/world.md` |
+| 情节地图 | `story/outline/volume_map.md` | `story/volume_outline.md`, `story/outline.md`, `story/plot.md` |
+| 角色 | `story/roles/**/*.md` | `story/character_matrix.md`, `story/characters.md` |
+| 规则书 | `story/book_rules.md` | `story/rules.md`, `story/writing_rules.md` |
+| 作者方向 | `story/author_intent.md` | `story/author.md`, `story/intent.md` |
+| 近期焦点 | `story/current_focus.md` | `story/focus.md`, `story/next.md` |
+| 当前状态 | `story/current_state.md` | `story/state.md`, `story/truth.md` |
+| 钩子 | `story/pending_hooks.md` | `story/hooks.md`, `story/foreshadowing.md` |
+| 摘要 | `story/chapter_summaries.md` | `story/summaries.md` |
+| 风格指南 | `story/style_guide.md` | `story/style.md`, `story/writing_style.md` |
 | 审计漂移 | `story/audit-drift.md` | `story/audit_drift.md` |
 
 > **术语统一**：canonical path 指首选路径，alias path 指兼容旧名。本契约中不再混用"首选/旧名"与"canonical/alias"两套说法。
@@ -191,11 +191,13 @@ books/<book-id>/
 
 ### 每个快照必须包含的文件
 
-- `current_state.md`
-- `pending_hooks.md`
-- `chapter_summaries.md`
-- `current_focus.md`
-- `audit-drift.md`
+路径相对书根（详见 `references/file-contract.json` 的 `snapshotFiles` 字段）：
+
+- `story/current_state.md`
+- `story/pending_hooks.md`
+- `story/chapter_summaries.md`
+- `story/current_focus.md`
+- `story/audit-drift.md`
 - `chapters/index.json`
 
 ### manifest.json

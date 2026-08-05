@@ -1,74 +1,26 @@
 #!/usr/bin/env python3
-"""snapshot_book — 创建书籍状态快照。
+"""snapshot_book - 创建书籍状态快照。
 
 默认支持 dry-run。验证所有目标路径都位于当前书根目录。
-禁止覆盖已有快照。支持验证快照哈希。
+禁止覆盖已有快照。支持验证快照哈希。快照文件清单来自 file-contract.json（_contract）。
 """
 
 import argparse
-import hashlib
 import json
 import os
 import shutil
 import sys
-from datetime import datetime, timezone
 
+import _contract
+from _contract import file_sha256, now_iso, safe_join
 
-SNAPSHOT_VERSION = "1.0.0"
-
-# 快照必须包含的文件
-SNAPSHOT_FILES = [
-    "current_state.md",
-    "pending_hooks.md",
-    "chapter_summaries.md",
-    "current_focus.md",
-    "audit-drift.md",
-    "chapters/index.json",
-]
-
-SNAPSHOT_REL_DIR = "story"
-
-
-def now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def file_sha256(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return "sha256:" + h.hexdigest()
-
-
-def safe_join(base: str, *paths: str) -> str:
-    """安全拼接路径，防止目录遍历。"""
-    target = os.path.normpath(os.path.join(base, *paths))
-    if not target.startswith(os.path.normpath(base) + os.sep) and target != os.path.normpath(base):
-        raise ValueError(f"路径越界：{paths}")
-    return target
-
-
-def next_snapshot_dir(book_dir: str) -> str:
-    """确定下一个快照目录编号。"""
-    snapshots_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR, "snapshots")
-    os.makedirs(snapshots_dir, exist_ok=True)
-    existing = []
-    for name in os.listdir(snapshots_dir):
-        if os.path.isdir(os.path.join(snapshots_dir, name)):
-            try:
-                existing.append(int(name))
-            except ValueError:
-                pass
-    next_num = (max(existing) + 1) if existing else 0
-    return f"{next_num:04d}"
+SNAPSHOT_VERSION = "1.1.0"
 
 
 def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
                     force: bool = False) -> dict:
     """创建快照。"""
-    # 验证所有目标路径都位于当前书根目录
-    snapshots_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR, "snapshots")
+    snapshots_dir = os.path.join(book_dir, "story", "snapshots")
     os.makedirs(snapshots_dir, exist_ok=True)
 
     snap_name = f"{chapter:04d}"
@@ -80,14 +32,12 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
             "error": f"快照 {snap_name} 已存在，使用 --force 覆盖（禁止静默覆盖）",
         }
 
-    # 收集文件
-    src_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR)
+    # 收集文件（清单来自 _contract.snapshot_files()，书根相对路径，正确解析 chapters/index.json）
     included_files = []
     file_hashes = {}
     missing = []
-
-    for fpath in SNAPSHOT_FILES:
-        src = os.path.join(src_dir, fpath)
+    for fpath in _contract.snapshot_files():
+        src = os.path.join(book_dir, fpath)
         if os.path.isfile(src):
             included_files.append(fpath)
             file_hashes[fpath] = file_sha256(src)
@@ -100,7 +50,7 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
         "createdAt": now_iso(),
         "includedFiles": included_files,
         "fileHashes": file_hashes,
-        "skillVersion": "1.0.0",
+        "skillVersion": _contract.skill_version(),
         "schemaVersion": "1.0.0",
     }
 
@@ -113,10 +63,9 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
             "missing_files": missing,
         }
 
-    # 创建快照目录
-    os.makedirs(snap_dir, exist_ok=True)
+    # 创建快照目录，按书根相对路径保留结构（story/... 与 chapters/...）
     for fpath in included_files:
-        src = os.path.join(src_dir, fpath)
+        src = os.path.join(book_dir, fpath)
         dst = safe_join(snap_dir, fpath)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(src, dst)
@@ -135,9 +84,9 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
 
 
 def verify_snapshot(book_dir: str, chapter: int) -> dict:
-    """验证快照哈希。"""
+    """验证快照哈希（按 manifest 自身键校验，兼容新旧布局）。"""
     snap_name = f"{chapter:04d}"
-    snap_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR, "snapshots", snap_name)
+    snap_dir = os.path.join(book_dir, "story", "snapshots", snap_name)
     manifest_path = os.path.join(snap_dir, "manifest.json")
 
     if not os.path.isfile(manifest_path):

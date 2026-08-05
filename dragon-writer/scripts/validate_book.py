@@ -26,32 +26,10 @@ from typing import List, Tuple
 
 SCHEMA_VERSION = "1.0.0"
 
-# 必需文件
-REQUIRED_FILES = [
-    "book.json",
-    "chapters/index.json",
-    "story/author_intent.md",
-    "story/current_focus.md",
-    "story/book_rules.md",
-    "story/current_state.md",
-    "story/pending_hooks.md",
-    "story/chapter_summaries.md",
-    "story/outline/story_frame.md",
-    "story/outline/volume_map.md",
-]
-
-# 兼容命名映射（与 file-contract.md 同步）
-ALIASES = {
-    "story/outline/story_frame.md": ["story/story_bible.md", "story/setting.md", "story/world.md"],
-    "story/outline/volume_map.md": ["story/volume_outline.md", "story/outline.md", "story/plot.md"],
-    "story/book_rules.md": ["story/rules.md", "story/writing_rules.md"],
-    "story/author_intent.md": ["story/author.md", "story/intent.md"],
-    "story/current_focus.md": ["story/focus.md", "story/next.md"],
-    "story/current_state.md": ["story/state.md", "story/truth.md"],
-    "story/pending_hooks.md": ["story/hooks.md", "story/foreshadowing.md"],
-    "story/chapter_summaries.md": ["story/summaries.md"],
-    "story/audit-drift.md": ["story/audit_drift.md"],
-}
+# 文件契约（canonical 路径 / 别名 / 必需 / 推荐 / 快照清单 / 哈希）统一来自 _contract，
+# 避免与 references/file-contract.json 漂移。
+import _contract  # noqa: E402
+from _contract import file_exists_with_alias, read_file, file_sha256  # noqa: E402
 
 
 class ValidationResult:
@@ -84,44 +62,25 @@ class ValidationResult:
         }
 
 
-def file_exists_with_alias(book_dir: str, path: str) -> Tuple[bool, str]:
-    """检查文件是否存在（含别名回退），返回 (是否存在, 实际路径)。"""
-    full = os.path.join(book_dir, path)
-    if os.path.isfile(full):
-        return True, path
-    for alias in ALIASES.get(path, []):
-        alias_full = os.path.join(book_dir, alias)
-        if os.path.isfile(alias_full):
-            return True, alias
-    return False, path
-
-
-def read_file(book_dir: str, path: str) -> str:
-    """读取文件（含别名回退）。"""
-    exists, actual = file_exists_with_alias(book_dir, path)
-    if not exists:
-        return ""
-    with open(os.path.join(book_dir, actual), "r", encoding="utf-8") as f:
-        return f.read()
-
-
-def file_sha256(path: str) -> str:
-    """计算文件 SHA-256。"""
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def check_missing_files(book_dir: str, result: ValidationResult):
-    """检查缺失文件。"""
-    for path in REQUIRED_FILES:
+    """检查缺失文件：必需报错、推荐告警、旧角色单文件格式提示。"""
+    for path in _contract.required_files():
         exists, actual = file_exists_with_alias(book_dir, path)
         if not exists:
             result.add_error(f"缺失必需文件：{path}")
         elif actual != path:
             result.add_warning(f"文件使用旧名：{actual}（建议迁移到 {path}）")
+    for path in _contract.recommended_files():
+        exists, actual = file_exists_with_alias(book_dir, path)
+        if not exists:
+            result.add_warning(f"缺失推荐文件：{path}")
+        elif actual != path:
+            result.add_warning(f"文件使用旧名：{actual}（建议迁移到 {path}）")
+    legacy = _contract.character_legacy_files()
+    for legacy_path in legacy.get("paths", []):
+        if os.path.isfile(os.path.join(book_dir, legacy_path)):
+            result.add_warning(legacy.get(
+                "message", f"旧角色文件 {legacy_path} 暂不支持，请迁移到 story/roles/"))
 
 
 def check_book_json(book_dir: str, result: ValidationResult):
@@ -181,9 +140,13 @@ def check_index_consistency(book_dir: str, result: ValidationResult):
         result.add_error(f"chapters/index.json 解析失败：{e}")
         return
 
+    # 兼容新旧两种 index 格式：新版 {"chapters": [...]} 与旧版裸列表 [{...}]
+    entries = index.get("chapters", []) if isinstance(index, dict) else index
     index_files = set()
-    for entry in index.get("chapters", []):
+    for entry in entries:
         f = entry.get("file", "")
+        if not f:
+            continue
         index_files.add(f)
         full = os.path.join(book_dir, "chapters", f)
         if not os.path.isfile(full):
@@ -243,7 +206,7 @@ def check_fact_chapters(book_dir: str, result: ValidationResult):
             start_chap = int(cols[3])
             if start_chap < 0:
                 result.add_warning(f"事实起始章不合法（负数）：{cols[0]}")
-        except (ValueError, IndexError):
+        except ValueError:
             pass
 
 
@@ -316,7 +279,7 @@ def check_snapshot_manifests(book_dir: str, result: ValidationResult):
             if not os.path.isfile(full):
                 result.add_error(f"快照 {name} 缺少文件：{fpath}")
             else:
-                actual_hash = "sha256:" + file_sha256(full)
+                actual_hash = file_sha256(full)
                 if actual_hash != expected_hash:
                     result.add_error(f"快照 {name} 哈希不匹配：{fpath}")
 

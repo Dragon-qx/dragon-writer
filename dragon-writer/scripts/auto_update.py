@@ -9,9 +9,9 @@
 5. 任何错误均跳过（skip_on_error=true），不中断 skill 运行
 
 使用方式：
-- 由 SKILL.md 工作流在启动时调用：python scripts/auto_update.py --check
-- 手动检查：python scripts/auto_update.py --check --verbose
-- 强制更新：python scripts/auto_update.py --update
+- 启动期检查（仅当 _meta.json 中 auto_check=true 时联网）：python scripts/auto_update.py check
+- 查看版本状态（不下载）：python scripts/auto_update.py status --verbose
+- 强制触发更新检查（覆盖 auto_check=false）：python scripts/auto_update.py check --force
 
 退出码：
 - 0 = 无需更新 / 更新成功 / 错误已跳过
@@ -204,8 +204,8 @@ def _try_direct_download(slug: str, install_dir: Path, remote_version: str) -> b
 
 def _merge_update(source: Path, target: Path) -> None:
     """将下载的更新合并到安装目录，保留本地配置文件。"""
-    # 保留不被覆盖的本地文件
-    preserved = {"_meta.json", "todo.md", "dashboard-todo.md"}
+    # 保留不被覆盖的本地文件（todo / dashboard-todo 已移除，仅保留本地更新配置）
+    preserved = {"_meta.json"}
     for item in source.iterdir():
         dest = target / item.name
         if item.name in preserved and dest.exists():
@@ -254,6 +254,13 @@ def cmd_check(args: argparse.Namespace) -> int:
     if not update_config.get("enabled", True):
         if args.verbose:
             print("[update] 自动更新已禁用")
+        return 0
+
+    # auto_check=false（默认）时，启动期 check 静默跳过，避免联网覆盖本地未提交工作；
+    # 用 --force 显式触发，或 status 子命令只查远程版本不下载。
+    if not update_config.get("auto_check", True) and not getattr(args, "force", False):
+        if args.verbose:
+            print("[update] auto_check=false，跳过启动检查（status 可查版本，check --force 可强制）")
         return 0
 
     skip_on_error = update_config.get("skip_on_error", True)
@@ -332,6 +339,8 @@ def main() -> int:
                         choices=["check", "status"],
                         help="check=检查并执行更新, status=显示版本状态")
     parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
+    parser.add_argument("--force", action="store_true",
+                        help="强制执行更新检查（覆盖 auto_check=false）")
 
     args = parser.parse_args()
 

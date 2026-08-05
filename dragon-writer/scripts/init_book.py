@@ -16,9 +16,9 @@ import shutil
 import sys
 from datetime import datetime, timezone
 
+import _contract
 
 SCHEMA_VERSION = "1.0.0"
-SKILL_VERSION = "1.0.0"
 
 # 书籍骨架目录（由仓库维护，直接复制，不让模型从 Markdown 重新拼装）
 BOOK_SKELETON_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "book-skeleton")
@@ -87,7 +87,7 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
         "createdAt": ts,
         "updatedAt": ts,
         "schemaVersion": SCHEMA_VERSION,
-        "skillVersion": SKILL_VERSION,
+        "skillVersion": _contract.skill_version(),
     }
     write_json(os.path.join(book_dir, "book.json"), book_json)
 
@@ -113,7 +113,7 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
         "createdAt": ts,
         "includedFiles": [],
         "fileHashes": {},
-        "skillVersion": SKILL_VERSION,
+        "skillVersion": _contract.skill_version(),
         "schemaVersion": SCHEMA_VERSION,
     }
     write_json(os.path.join(snapshot_dir, "manifest.json"), manifest)

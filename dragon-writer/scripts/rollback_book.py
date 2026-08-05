@@ -1,59 +1,26 @@
 #!/usr/bin/env python3
-"""rollback_book — 安全回滚书籍到指定章节的状态快照。
+"""rollback_book - 安全回滚书籍到指定章节的状态快照。
 
 默认只输出影响范围（dry-run）。验证所有目标路径都位于当前书根目录。
 回滚前创建恢复点。删除动作必须通过显式参数开启。
+快照文件清单来自 file-contract.json（_contract）。
 """
 
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
-from datetime import datetime, timezone
 
-
-SNAPSHOT_FILES = [
-    "current_state.md",
-    "pending_hooks.md",
-    "chapter_summaries.md",
-    "current_focus.md",
-    "audit-drift.md",
-    "chapters/index.json",
-]
-
-SNAPSHOT_REL_DIR = "story"
-
-
-def now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def safe_join(base: str, *paths: str) -> str:
-    target = os.path.normpath(os.path.join(base, *paths))
-    if not target.startswith(os.path.normpath(base) + os.sep) and target != os.path.normpath(base):
-        raise ValueError(f"路径越界：{paths}")
-    return target
-
-
-def next_snapshot_dir(book_dir: str) -> str:
-    snapshots_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR, "snapshots")
-    os.makedirs(snapshots_dir, exist_ok=True)
-    existing = []
-    for name in os.listdir(snapshots_dir):
-        if os.path.isdir(os.path.join(snapshots_dir, name)):
-            try:
-                existing.append(int(name))
-            except ValueError:
-                pass
-    next_num = (max(existing) + 1) if existing else 0
-    return f"{next_num:04d}"
+import _contract
+from _contract import next_snapshot_dir, safe_join
 
 
 def plan_rollback(book_dir: str, chapter: int) -> dict:
     """规划回滚影响范围。"""
     snap_name = f"{chapter:04d}"
-    snap_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR, "snapshots", snap_name)
+    snap_dir = os.path.join(book_dir, "story", "snapshots", snap_name)
     manifest_path = os.path.join(snap_dir, "manifest.json")
 
     if not os.path.isfile(manifest_path):
@@ -62,7 +29,7 @@ def plan_rollback(book_dir: str, chapter: int) -> dict:
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
 
-    # 恢复的文件
+    # 恢复的文件（按 manifest 的 includedFiles 键，书根相对路径）
     restore_files = manifest.get("includedFiles", [])
 
     # 需要删除的后续章节
@@ -72,7 +39,6 @@ def plan_rollback(book_dir: str, chapter: int) -> dict:
         for name in sorted(os.listdir(chapters_dir)):
             if not name.endswith(".md"):
                 continue
-            import re
             m = re.match(r"^(\d+)", name)
             if m and int(m.group(1)) > chapter:
                 chapters_to_delete.append(name)
@@ -93,27 +59,27 @@ def execute_rollback(book_dir: str, chapter: int, delete_chapters: bool = False,
         return plan
 
     snap_name = plan["snapshot"]
-    snap_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR, "snapshots", snap_name)
-    src_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR)
+    snap_dir = os.path.join(book_dir, "story", "snapshots", snap_name)
 
-    # 回滚前创建恢复点
+    # 回滚前创建恢复点（清单来自 _contract.snapshot_files()，书根相对路径）
+    recovery_name = None
     recovery_dir = None
     if create_recovery:
         recovery_name = next_snapshot_dir(book_dir)
-        recovery_dir = os.path.join(book_dir, SNAPSHOT_REL_DIR, "snapshots", recovery_name)
+        recovery_dir = os.path.join(book_dir, "story", "snapshots", recovery_name)
         os.makedirs(recovery_dir, exist_ok=True)
-        for fpath in SNAPSHOT_FILES:
-            src = os.path.join(src_dir, fpath)
+        for fpath in _contract.snapshot_files():
+            src = os.path.join(book_dir, fpath)
             if os.path.isfile(src):
                 dst = safe_join(recovery_dir, fpath)
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(src, dst)
 
-    # 恢复快照文件到工作区
+    # 恢复快照文件到工作区（按 manifest 键的书根相对路径还原）
     restored = []
     for fpath in plan["restore_files"]:
         src = safe_join(snap_dir, fpath)
-        dst = safe_join(src_dir, fpath)
+        dst = safe_join(book_dir, fpath)
         if os.path.isfile(src):
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(src, dst)
@@ -131,11 +97,10 @@ def execute_rollback(book_dir: str, chapter: int, delete_chapters: bool = False,
         # 重建 index
         index_path = os.path.join(chapters_dir, "index.json")
         if os.path.isfile(index_path):
-            import re
             with open(index_path, "r", encoding="utf-8") as f:
                 index = json.load(f)
             index["chapters"] = [e for e in index.get("chapters", [])
-                                if not e.get("file", "") in deleted]
+                                 if e.get("file", "") not in deleted]
             with open(index_path, "w", encoding="utf-8") as f:
                 json.dump(index, f, ensure_ascii=False, indent=2)
                 f.write("\n")
@@ -143,7 +108,7 @@ def execute_rollback(book_dir: str, chapter: int, delete_chapters: bool = False,
     return {
         "ok": True,
         "snapshot": snap_name,
-        "recovery_snapshot": recovery_name if create_recovery else None,
+        "recovery_snapshot": recovery_name,
         "restored_files": restored,
         "deleted_chapters": deleted,
     }

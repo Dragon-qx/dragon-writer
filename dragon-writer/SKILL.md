@@ -14,31 +14,26 @@ description: 面向文件化、跨会话长篇虚构项目的创建、导入、�
 - **静态基础与运行时态分开**：Foundation（前提、世界法则、卷章地图、角色卡稳定属性、规则书）只在用户明确要求或方向性转向时修改；Runtime（当前状态、钩子、摘要、焦点、审计漂移、道具账本、空间锚点）每章更新。
 - **报告具体创建或变更了哪些文件**：不要声称某个章节或某本书"已经存在"，除非文件真的被写入了。
 
-## 自动更新（启动时静默检查）
+## 自动更新（默认关闭，按需手动）
 
-每次 skill 启动时，在执行任何用户任务**之前**，静默检查一次更新：
+`_meta.json` 默认 `update.auto_check=false`：skill 启动时**不联网、不下载**，避免静默覆盖本地未提交工作。需要时手动触发：
 
 ```bash
-python scripts/auto_update.py check
+python scripts/auto_update.py status --verbose   # 只查远程版本，不下载
+python scripts/auto_update.py check --force      # 显式检查并应用更新（错误自动跳过）
 ```
 
-- 有新版本 → 脚本自动下载并应用，打印 `已更新到版本 x.y.z`，然后继续执行用户任务。
-- 无新版本 / 已是最新 → 静默通过，继续执行用户任务。
-- 任何网络错误、API 不可达、下载失败 → **自动跳过**（`skip_on_error=true`），不中断 skill 运行。
+- `check --force` 有新版本时脚本自动下载并应用，打印 `已更新到版本 x.y.z`。
+- 无新版本 / 已是最新时静默通过。
+- 任何网络错误、API 不可达、下载失败均**自动跳过**（`skip_on_error=true`），不中断 skill 运行。
 
-版本号规则：语义化版本 `x.y.z`（如 `2.0.2`）。对比逻辑：
-- 本地无 `_meta.json` 或无 `version` 字段 → 视为需要更新。
-- 本地版本 < 远程版本 → 执行更新。
-- 本地版本 >= 远程版本 → 跳过。
+版本号规则：语义化版本 `x.y.z`（如 `3.2.0`）。本地版本 < 远程版本才执行更新；本地无 `_meta.json` 或无 `version` 字段视为需要更新。远程版本来源：`https://api.skillhub.cn/api/v1/search?q=d-writer`（slug=`d-writer`）。
 
-远程版本来源：`https://api.skillhub.cn/api/v1/search?q=d-writer`（slug=`d-writer`）。
-
-> **手动检查更新**：运行 `python scripts/auto_update.py status --verbose`。
-> **禁用自动更新**：编辑 `_meta.json` → `update.enabled: false`。
+> **开启启动期自动检查**：编辑 `_meta.json` → `update.auto_check: true`。**完全禁用更新**：`update.enabled: false`。
 
 ## 从这里开始
 
-0. **【自动】检查更新**：运行 `python scripts/auto_update.py --check`（静默，错误自动跳过）。
+0. **检查更新（可选）**：默认 `auto_check=false`，启动时不联网。需要时手动 `python scripts/auto_update.py status --verbose` 查版本，或 `python scripts/auto_update.py check --force` 触发更新（错误自动跳过，不中断）。
 1. **识别模式**：
    - 新书：用户给了一句灵感、书名、题材，或要求写一本新小说 → 读 `references/workflow-new-book.md`。
    - 续写：存在大纲 / 设定 / 章节 / 状态文件 → 读 `references/workflow-continue.md`。
@@ -52,7 +47,7 @@ python scripts/auto_update.py check
 
 ## 双层质量门禁
 
-写一章不是写完就定稿，而是过两层。标准表述：**9 项驻场初筛 + 41 个候选深化审计维度，按体裁和章节风险裁剪执行**。
+写一章不是写完就定稿，而是过两层。标准表述：**9 项驻场初筛 + 42 个候选深化审计维度，按体裁和章节风险裁剪执行**。
 
 ### 第一层：驻场初筛（9 点，每章必过）
 
@@ -69,9 +64,15 @@ python scripts/auto_update.py check
 
 初筛通过 → 进入第二层；初筛没过 → 直接修订后重新初筛。
 
-### 第二层：41 个候选深化审计维度连续审计 + 审-改循环
+### 第二层：42 个候选深化审计维度（子代理审查）
 
-按 `references/audit-dimensions.md` 执行：体裁裁剪 → 逐维出报告（pass / fail / not_applicable / unknown）→ 修订 → 回头从第 1 维再过一遍 → 分级落地（critical 必过、warning 修或留漂移记录、info 仅记录）→ 3 轮上限 → 留痕 `audit-drift.md`。**每章都创建章节意图（`chapter-NNNN.intent.md`），不仅在方向改变时创建。**
+**审计不得由起草同一上下文自评**——这会导致文风维度自评失效、审-改循环收敛到局部最优。审计必须在独立子代理中以**新鲜读者视角**运行（详见 `references/audit-dimensions.md` 的"子代理审查机制"）。
+
+流程：体裁裁剪 → 主代理准备审计包（草稿 + 激活维度 + 最小连续性事实，**不含**大纲/意图/角色档案）→ 启动子代理冷读审计 → 子代理返回结构化报告（每维 pass/fail/unknown + 证据 + 建议 + 文风专项）→ 主代理按报告修改 → 可选二审 → 留痕 `audit-drift.md`。
+
+分级落地：critical 必过、warning 修或留漂移记录、info 仅记录。未当场修复的发现必须落记录。**每章都创建章节意图（`chapter-NNNN.intent.md`），不仅在方向改变时创建。**
+
+> **为什么子代理？** 作者模型"知道每句话的意图"，无法自评转折是否可预测（维22）、套路是否重复（维21）、节奏是否单调（维23）。子代理只收到最小事实包，以读者视角冷读，打破自评盲区。
 
 ## 平台说明
 

@@ -73,7 +73,7 @@ def main():
         json.dump({"bytes": size_bytes, "kb": round(size_kb, 1)}, f)
 
     print("\n=== CSP 与外部依赖检查 ===")
-    ok("CSP 包含 connect-src 'none'", "connect-src 'none'" in html or "connect-src 'none'" in html)
+    ok("CSP 包含 connect-src 'none'", "connect-src 'none'" in " ".join(html.split()))
     ok("CSP 包含 script-src 'self'", "script-src 'self'" in html)
     ok("CSP 禁止 object-src", "object-src 'none'" in html)
     ok("无外部 script src", not re.search(r'<script[^>]+src\s*=\s*["\']https?://', html))

@@ -39,23 +39,33 @@ def read_dashboard():
 
 
 def check_aliases_match(html, contract):
-    """检查 HTML 中的 ALIASES 对象与契约一致（仅检查 key 集合）。"""
+    """检查 HTML 中的 ALIASES 与契约完全一致（key 集合 + 每条 value）。"""
     aliases = contract.get("aliases", {})
-    # 提取 HTML 中的 ALIASES key
-    m = re.search(r"const ALIASES = \{([^}]+)\}", html, re.DOTALL)
+    m = re.search(r"const ALIASES\s*=\s*\{([^}]*)\}", html, re.DOTALL)
     if not m:
         print("[build] 警告：未找到 ALIASES 对象")
         return False
     body = m.group(1)
-    html_keys = set(re.findall(r"'([^']+)':\s*\[", body))
+    html_aliases = {}
+    for km in re.finditer(r"'([^']+)':\s*\[([^\]]*)\]", body):
+        html_aliases[km.group(1)] = re.findall(r"'([^']*)'", km.group(2))
+
     contract_keys = set(aliases.keys())
+    html_keys = set(html_aliases.keys())
     missing = contract_keys - html_keys
     extra = html_keys - contract_keys
     if missing:
-        print(f"[build] 警告：ALIASES 缺少契约中的 key：{missing}")
+        print(f"[build] 警告：ALIASES 缺少契约中的 key：{sorted(missing)}")
     if extra:
-        print(f"[build] 警告：ALIASES 有多余的 key：{extra}")
-    return not missing and not extra
+        print(f"[build] 警告：ALIASES 有多余的 key：{sorted(extra)}")
+    # 值比对（catch value drift，如 story/ 前缀不一致）
+    value_drift = []
+    for k in contract_keys & html_keys:
+        if html_aliases[k] != list(aliases[k]):
+            value_drift.append((k, html_aliases[k], list(aliases[k])))
+    for k, hv, cv in value_drift:
+        print(f"[build] 警告：ALIASES 值漂移 {k}：HTML={hv} 契约={cv}")
+    return not missing and not extra and not value_drift
 
 
 def check_no_external_deps(html):
@@ -71,7 +81,7 @@ def check_no_external_deps(html):
 
 def check_csp(html):
     """检查 CSP 中 connect-src 'none' 不被移除。"""
-    if "connect-src 'none'" not in html and "connect-src 'none'" not in html.replace(" ", " "):
+    if "connect-src 'none'" not in " ".join(html.split()):
         print("[build] 错误：CSP 中 connect-src 'none' 被移除")
         return False
     return True

@@ -105,10 +105,10 @@
   },
 
   "aliases": {
-    "story/outline/story_frame.md": ["story/story_bible.md", "setting.md", "world.md"],
-    "story/outline/volume_map.md": ["story/volume_outline.md", "outline.md", "plot.md"],
-    "story/book_rules.md": ["rules.md", "writing_rules.md"],
-    "story/author_intent.md": ["author.md", "intent.md"],
+    "story/outline/story_frame.md": ["story/story_bible.md", "story/setting.md", "story/world.md"],
+    "story/outline/volume_map.md": ["story/volume_outline.md", "story/outline.md", "story/plot.md"],
+    "story/book_rules.md": ["story/rules.md", "story/writing_rules.md"],
+    "story/author_intent.md": ["story/author.md", "story/intent.md"],
     "story/current_focus.md": ["story/focus.md", "story/next.md"],
     "story/current_state.md": ["story/state.md", "story/truth.md"],
     "story/pending_hooks.md": ["story/hooks.md", "story/foreshadowing.md"],
@@ -118,17 +118,17 @@
   },
 
   "excludedPaths": {
-    "description": "这些目录下的文件不会被读取为权威数据（快照、备份、rewrite 候选等）",
+    "description": "这些目录下的文件不会被读取为权威数据（快照、备份、rewrite 候选等）。路径相对书根，均位于 story/ 下。",
     "patterns": [
-      "^snapshots/",
-      "^runtime/rewrites/",
-      "^runtime/rewrite/",
-      "^rewrite/",
-      "^rewrites/",
-      "^backup/",
-      "^backups/",
-      "^快照/",
-      "^备份/"
+      "^story/snapshots/",
+      "^story/runtime/rewrites/",
+      "^story/runtime/rewrite/",
+      "^story/rewrite/",
+      "^story/rewrites/",
+      "^story/backup/",
+      "^story/backups/",
+      "^story/快照/",
+      "^story/备份/"
     ]
   },
 
@@ -139,12 +139,33 @@
     "message": "旧角色文件格式暂不支持。请迁移到 story/roles/{major|minor}/{name}.md 的单文件单角色格式。"
   },
 
-  "requiredFiles": ["book.json", "chapters/"],
+  "requiredFiles": [
+    "book.json",
+    "chapters/index.json",
+    "story/author_intent.md",
+    "story/current_focus.md",
+    "story/book_rules.md",
+    "story/current_state.md",
+    "story/pending_hooks.md",
+    "story/chapter_summaries.md",
+    "story/outline/story_frame.md",
+    "story/outline/volume_map.md"
+  ],
 
   "recommendedFiles": [
-    "story/outline/story_frame.md",
-    "story/outline/volume_map.md",
-    "story/book_rules.md",
-    "story/current_state.md"
-  ]
+    "story/style_guide.md",
+    "story/audit-drift.md"
+  ],
+
+  "snapshotFiles": {
+    "description": "每个快照目录必须包含的运行时文件（书根相对路径）。snapshot_book / rollback_book 共用本字段，避免路径解析漂移。",
+    "paths": [
+      "story/current_state.md",
+      "story/pending_hooks.md",
+      "story/chapter_summaries.md",
+      "story/current_focus.md",
+      "story/audit-drift.md",
+      "chapters/index.json"
+    ]
+  }
 }
