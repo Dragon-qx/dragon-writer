@@ -96,7 +96,7 @@ books/<book-id>/
 : 弧线与章节地图。新书可以是卷级，导入续写可以是章节级。末尾附上节奏原则。
 
 `roles/**/*.md`
-: 一个角色一份文件。**仅保存稳定属性**：角色功能、欲望、恐惧、秘密、言行指纹、长期弧线。易漂移的"当前关系 / 伤势 / 位置 / 能力状态"不写入档案，统一归入 `current_state.md`（详见 [Foundation 与 Runtime 边界](#foundation-与-runtime-边界)）。
+: 一个角色一份文件。保存**稳定属性**（角色功能、欲望、恐惧、秘密、言行指纹、长期弧线）+ **数据时间线**（「物理数据时间线」「逻辑数据时间线」，章节锚定的追加式 Runtime 区块，见 `templates.md`）。易漂移的"当前关系 / 伤势 / 位置"仍不写入档案，统一归入 `current_state.md`（详见 [Foundation 与 Runtime 边界](#foundation-与-runtime-边界)）。
 
 `book_rules.md`
 : 可执行的规则：POV、禁手、体裁约束、力量 / 资源 / 限制、命名规则、风格约束、硬定局锁。包含作者不可妥协项与年代约束。
@@ -130,14 +130,14 @@ books/<book-id>/
 
 **Foundation（静态基础）**：跨章节稳定，不随单章推进而漂移。
 - `author_intent.md`、`book_rules.md`、`outline/story_frame.md`、`outline/volume_map.md`
-- 角色档案中的稳定属性：功能、欲望、恐惧、秘密、言行指纹、长期弧线
+- 角色档案中的稳定属性：功能、欲望、恐惧、秘密、言行指纹、长期弧线（角色档案是**混合层**，时间线部分按 Runtime 治理，见边界规则）
 
 **Runtime（运行时态）**：每章推进都可能变化，是落盘时必更新的对象。
 - `current_state.md`（事实表、关系、伤势/资源、道具账本、空间锚点）
 - `pending_hooks.md`、`chapter_summaries.md`、`current_focus.md`、`audit-drift.md`
 - 角色档案中的易漂移"当前状态"（建议迁入 `current_state.md`，不在档案内直接修改）
 
-**边界规则**：续写时只改 Runtime 文件；Foundation 文件仅在用户明确要求或方向性转向时修改。角色档案以 Foundation 方式治理——把"当前关系 / 伤势 / 位置 / 能力状态"从档案中剥离，统一归入 `current_state.md`，避免档案成为漂移源。
+**边界规则**：续写时只改 Runtime 文件；Foundation 文件仅在用户明确要求或方向性转向时修改。角色档案是**混合层**——稳定属性按 Foundation 治理（跨章不漂移）；「物理/逻辑数据时间线」按 Runtime 追加式治理（每章只新增变化点行、不改旧行），它与 `current_state.md` 的关系是：时间线存**逐章数值/外观历史**，`current_state.md` 存**当前关系/伤势/位置/目标**。"当前关系 / 伤势 / 位置 / 能力状态"这类即时态仍归入 `current_state.md`，不在档案稳定属性区直接修改。
 
 ---
 
@@ -199,6 +199,7 @@ books/<book-id>/
 - `story/current_focus.md`
 - `story/audit-drift.md`
 - `chapters/index.json`
+- `story/roles/**`（角色卡数据时间线，支持 glob 通配；展开逻辑见 `_contract.resolve_snapshot_files`）
 
 ### manifest.json
 
@@ -218,6 +219,7 @@ books/<book-id>/
 
 - **禁止静默覆盖**：已有快照存在时，不自动覆盖，必须显式确认。
 - **恢复提示**：为缺失或哈希不匹配的快照提供恢复提示（列出缺失文件、哈希差异）。
+- **glob 一致性**：快照写入（`snapshot_book`）与回滚恢复点收集（`rollback_book`）必须共用 `_contract.resolve_snapshot_files()` 的展开逻辑，禁止各自硬编码路径集。
 
 ---
 
