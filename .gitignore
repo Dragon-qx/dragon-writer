@@ -24,3 +24,7 @@ dragon-writer/tests/artifacts/*.json
 
 # Logs
 *.log
+
+# SDD scratch (ledger, briefs, reports)
+.superpowers/
+
