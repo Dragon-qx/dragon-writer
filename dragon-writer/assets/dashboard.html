@@ -8,21 +8,21 @@
 <style>
 /* ========== CSS 变量系统 ========== */
 :root {
-  --bg: #f6f5f1;
+  --bg: #f5f6f8;
   --bg-elevated: #ffffff;
-  --bg-subtle: #efeae1;
-  --text: #1c1b18;
-  --text-muted: #6b6760;
-  --border: #e0dcd4;
-  --accent: #b5651d;
-  --accent-soft: #f0e4d2;
-  --success: #4a7c59;
-  --danger: #b53b3b;
-  --warning: #c97d2b;
-  --track: #e7e3db;
+  --bg-subtle: #eef0f4;
+  --text: #17191f;
+  --text-muted: #68707d;
+  --border: #e3e6ec;
+  --accent: #4f46e5;
+  --accent-soft: #edeefc;
+  --success: #15803d;
+  --danger: #dc2626;
+  --warning: #b45309;
+  --track: #e6e8ee;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+  --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.05);
   --mono: ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
   --serif: "Songti SC","Noto Serif SC","Source Han Serif SC",Georgia,serif;
   --sans: -apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
@@ -32,23 +32,25 @@
 }
 @media(prefers-color-scheme:dark) {
   :root.theme-auto {
-    --bg: #161513; --bg-elevated: #1f1d1a; --bg-subtle: #26241f;
-    --text: #ece7df; --text-muted: #9b9488; --border: #33302a;
-    --accent: #d99a4e; --accent-soft: #3a2f1e; --success: #6fae80;
-    --track: #2d2a25; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+    --bg: #0e1014; --bg-elevated: #15181e; --bg-subtle: #1d2129;
+    --text: #e7e9ee; --text-muted: #98a0ad; --border: #262b35;
+    --accent: #818cf8; --accent-soft: #23263f; --success: #4ade80;
+    --warning: #e2a34a; --danger: #e06565;
+    --track: #232833; --shadow: 0 1px 2px rgba(0,0,0,.5), 0 4px 14px rgba(0,0,0,.4);
   }
 }
 :root.theme-dark {
-  --bg: #161513; --bg-elevated: #1f1d1a; --bg-subtle: #26241f;
-  --text: #ece7df; --text-muted: #9b9488; --border: #33302a;
-  --accent: #d99a4e; --accent-soft: #3a2f1e; --success: #6fae80;
-  --track: #2d2a25; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+  --bg: #0e1014; --bg-elevated: #15181e; --bg-subtle: #1d2129;
+  --text: #e7e9ee; --text-muted: #98a0ad; --border: #262b35;
+  --accent: #818cf8; --accent-soft: #23263f; --success: #4ade80;
+  --warning: #e2a34a; --danger: #e06565;
+  --track: #232833; --shadow: 0 1px 2px rgba(0,0,0,.5), 0 4px 14px rgba(0,0,0,.4);
 }
 :root.theme-light {
-  --bg: #f6f5f1; --bg-elevated: #ffffff; --bg-subtle: #efeae1;
-  --text: #1c1b18; --text-muted: #6b6760; --border: #e0dcd4;
-  --accent: #b5651d; --accent-soft: #f0e4d2; --success: #4a7c59;
-  --track: #e7e3db; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+  --bg: #f5f6f8; --bg-elevated: #ffffff; --bg-subtle: #eef0f4;
+  --text: #17191f; --text-muted: #68707d; --border: #e3e6ec;
+  --accent: #4f46e5; --accent-soft: #edeefc; --success: #15803d;
+  --track: #e6e8ee; --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.05);
 }
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
@@ -60,23 +62,33 @@ html,body{margin:0;padding:0}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;font-size:var(--font-size-base)}
 
 /* ========== 按钮 ========== */
-button{font-family:inherit;cursor:pointer;background:var(--bg-subtle);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:var(--font-size-base);transition:background var(--transition-fast),border-color var(--transition-fast)}
-button:hover{background:var(--border)}
-button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-button.primary:hover{filter:brightness(.95)}
+button{font-family:inherit;cursor:pointer;background:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 14px;font-size:var(--font-size-base);font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:background var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}
+button:hover{background:var(--bg-subtle);border-color:var(--text-muted)}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:disabled:hover{background:var(--bg-elevated);border-color:var(--border)}
+button:disabled:active{transform:none}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 1px 3px rgba(79,70,229,.35)}
+button.primary:hover{background:var(--accent);filter:brightness(1.08);border-color:var(--accent);box-shadow:0 3px 10px rgba(79,70,229,.4)}
+button.primary:disabled{box-shadow:none;filter:none}
 input[type=file]{display:none}
 label.filelabel{display:inline-block}
 
 /* ========== 落地页 ========== */
-#landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:20px;text-align:center;padding:24px}
-#landing h1{font-family:var(--serif);font-size:30px;margin:0;letter-spacing:.02em}
+#landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:20px;text-align:center;padding:24px;background:radial-gradient(ellipse 80% 55% at 50% 32%,var(--accent-soft) 0%,transparent 70%)}
+#landing .logo{font-size:56px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.12));animation:logoFloat 4s ease-in-out infinite}
+@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+#landing h1{font-size:30px;font-weight:700;margin:0;letter-spacing:-.02em}
 #landing p{color:var(--text-muted);max-width:460px;margin:0}
 #landing .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 #landing .hint{font-size:13px;max-width:500px}
 #landing code{background:var(--bg-subtle);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12px}
+#landing button{padding:10px 18px}
 #resumeArea{margin-top:12px}
 #resumeArea p{margin:6px 0}
 #resumeArea .hint{font-size:13px;color:var(--text-muted)}
+#resumeLink{color:var(--accent);font-weight:600;text-decoration:none;border-bottom:1px dashed var(--accent)}
+#resumeLink:hover{border-bottom-style:solid}
 
 /* ========== Loading ========== */
 .loading{display:flex;align-items:center;gap:10px;color:var(--text-muted)}
@@ -94,43 +106,49 @@ body.loaded #app{display:grid;grid-template-rows:auto 1fr}
 /* ========== Appbar ========== */
 .appbar{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--bg-elevated);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
 .appbar .bookmeta{display:flex;align-items:baseline;gap:10px;min-width:0}
-.appbar .booktitle{font-family:var(--serif);font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appbar .booktitle{font-size:17px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .appbar .booksub{color:var(--text-muted);font-size:13px;white-space:nowrap}
 .appbar .spacer{flex:1}
 .appbar .badge{background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
 
 /* ========== Tabs ========== */
 .tabs[role="tablist"]{border-right:1px solid var(--border);background:var(--bg-elevated);padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:53px;align-self:start;height:calc(100vh - 53px)}
-.tabs button[role="tab"]{text-align:left;border:none;background:transparent;border-radius:var(--radius-sm);padding:10px 12px;color:var(--text-muted);font-size:var(--font-size-base);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.tabs button[role="tab"]{text-align:left;border:none;background:transparent;border-radius:var(--radius-sm);padding:10px 12px 10px 14px;color:var(--text-muted);font-size:var(--font-size-base);cursor:pointer;position:relative;transition:background var(--transition-fast),color var(--transition-fast)}
 .tabs button[role="tab"]:hover{background:var(--bg-subtle);color:var(--text)}
 .tabs button[role="tab"][aria-selected="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.tabs button[role="tab"][aria-selected="true"]::before{content:'';position:absolute;left:4px;top:50%;transform:translateY(-50%);width:3px;height:18px;border-radius:2px;background:var(--accent)}
 .tabs .navlabel{font-size:11px;letter-spacing:.08em;color:var(--text-muted);padding:14px 12px 6px;text-transform:uppercase}
 
 /* ========== Content ========== */
 main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .panel{display:none}
-.panel.active{display:block}
-.panel h2{font-family:var(--serif);font-size:24px;margin:0 0 4px}
+.panel.active{display:block;animation:panelIn .28s ease}
+@keyframes panelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.panel h2{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
 .panel .lede{color:var(--text-muted);margin:0 0 24px}
 
 /* ========== 基本组件 ========== */
 .card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
 .grid{display:grid;gap:16px}
 .grid.stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.stat.card{transition:transform var(--transition-normal),box-shadow var(--transition-normal)}
+.stat.card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(0,0,0,.05),0 8px 20px rgba(0,0,0,.07)}
 .empty-state{text-align:center;color:var(--text-muted);padding:40px 20px}
 .empty-state .icon{font-size:40px;margin-bottom:12px}
 .stat .label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
-.stat .value{font-family:var(--serif);font-size:26px;font-weight:600;margin-top:4px}
+.stat .value{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px}
 .stat .value small{font-size:14px;color:var(--text-muted);font-weight:400}
 .muted{color:var(--text-muted)}
-.section-title{font-size:13px;letter-spacing:.06em;color:var(--text-muted);margin:28px 0 12px}
+.section-title{display:flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.06em;color:var(--text-muted);margin:28px 0 12px}
+.section-title::before{content:'';width:3px;height:13px;border-radius:2px;background:var(--accent);flex-shrink:0}
 .col2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 
 /* ========== Overview 组件 ========== */
+@property --p{syntax:'<percentage>';inherits:false;initial-value:0%}
 .ringwrap{display:flex;align-items:center;gap:20px}
-.ring{width:80px;height:80px;border-radius:50%;background:conic-gradient(var(--accent) 0% var(--p),var(--track) var(--p) 100%);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
+.ring{width:80px;height:80px;border-radius:50%;background:conic-gradient(var(--accent) 0% var(--p,0%),var(--track) var(--p,0%) 100%);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;transition:--p .9s cubic-bezier(.22,.8,.36,1)}
 .ring::before{content:'';position:absolute;width:62px;height:62px;border-radius:50%;background:var(--bg-elevated)}
-.ring .num{position:relative;z-index:1;font-family:var(--serif);font-size:18px;font-weight:700;color:var(--text)}
+.ring .num{position:relative;z-index:1;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
 .ring .pct-sym{font-size:11px;font-weight:400;color:var(--text-muted)}
 .ringcaption{font-size:13px;margin-bottom:2px}
 .ringcaption.muted{font-size:12px}
@@ -144,7 +162,11 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .table-wrap th{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 .drift-section{margin-bottom:16px}
 .drift-title{font-weight:600;margin-bottom:6px;color:var(--accent)}
+.drift-title.is-fixed{color:var(--success)}
+.drift-title.is-open{color:var(--warning)}
 .drift-item{margin-bottom:10px;padding-left:8px;border-left:2px solid var(--border)}
+.drift-item.is-fixed{border-left-color:var(--success)}
+.drift-item.is-open{border-left-color:var(--warning)}
 .drift-item b{font-size:13px}
 .drift-item .muted{font-size:12px;margin-top:2px}
 .article{line-height:1.8;font-size:14px}
@@ -159,12 +181,16 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .article blockquote{border-left:3px solid var(--accent);margin:12px 0;padding:8px 16px;background:var(--bg-subtle);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
 
 /* ========== Graph 关系图 ========== */
-.graph-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;min-height:400px;align-items:start}
-.graph-canvas-wrap{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;height:420px;min-height:420px;max-height:70vh}
-.graph-canvas-wrap canvas{display:block;width:100%;height:100%;touch-action:none}
-.graph-sidebar{display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow-y:auto}
+.graph-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;height:420px;max-height:70vh}
+.graph-canvas-wrap{background:var(--bg-elevated);background-image:radial-gradient(var(--border) 1px,transparent 1px);background-size:20px 20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;height:100%;min-height:0}
+.graph-canvas-wrap canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.graph-tools{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:2}
+.graph-tools button{width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow);color:var(--text-muted)}
+.graph-tools button:hover{color:var(--accent);border-color:var(--accent);background:var(--bg-elevated)}
+.graph-hint{position:absolute;left:10px;bottom:8px;font-size:11px;color:var(--text-muted);background:var(--bg-elevated);border:1px solid var(--border);border-radius:999px;padding:2px 10px;opacity:.85;pointer-events:none;z-index:2}
+.graph-sidebar{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto}
 #graphInfo{font-size:13px;line-height:1.6}
-#graphInfo .name{font-family:var(--serif);font-size:18px;font-weight:600;margin-bottom:4px}
+#graphInfo .name{font-size:17px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
 #graphInfo .tier{font-size:12px;color:var(--text-muted);margin-bottom:8px}
 #graphInfo dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:13px}
 #graphInfo dt{color:var(--text-muted);white-space:nowrap}
@@ -174,8 +200,13 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 #graphInfo .rname{font-weight:600}
 #charList{display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto}
 .charcard{padding:10px 12px;background:var(--bg-subtle);border-radius:var(--radius-sm);border:2px solid transparent;cursor:pointer;transition:border-color var(--transition-fast),background var(--transition-fast)}
+.charcard.major{border-left:3px solid var(--accent)}
+.charcard.minor{border-left:3px solid var(--border)}
 .charcard:hover{background:var(--border)}
-.charcard .name{font-weight:600;font-size:13px}
+.charcard .name{font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tier-badge{flex-shrink:0;padding:1px 8px;border-radius:999px;font-size:10px;font-weight:600;letter-spacing:.03em}
+.tier-badge.major{background:var(--accent-soft);color:var(--accent)}
+.tier-badge.minor{background:var(--bg-elevated);color:var(--text-muted);border:1px solid var(--border)}
 .charcard .tier{font-size:11px;color:var(--text-muted);margin-bottom:4px}
 .charcard .kv{font-size:12px;color:var(--text-muted);display:flex;gap:4px}
 .charcard .kv b{color:var(--text);min-width:16px}
@@ -186,6 +217,53 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .search-input:focus{border-color:var(--accent)}
 .filter-select{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--text);font-family:inherit;font-size:var(--font-size-base);cursor:pointer}
 
+/* ========== 设定内容（折叠卡片） ========== */
+.settingfile{margin-bottom:14px;padding:0;overflow:hidden}
+.settingfile .row{display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;user-select:none;transition:background var(--transition-fast)}
+.settingfile .row:hover{background:var(--bg-subtle)}
+.settingfile .chev{font-size:10px;color:var(--text-muted);transition:transform var(--transition-normal);flex-shrink:0}
+.settingfile.open .chev{transform:rotate(90deg)}
+.settingfile .name{flex:1;font-size:15px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.settingfile .pct{font-weight:700;font-size:14px;flex-shrink:0}
+.settingfile .tag{background:var(--bg-subtle);color:var(--text-muted);padding:2px 10px;border-radius:999px;font-size:12px;flex-shrink:0}
+.settingfile .body{display:none;border-top:1px solid var(--border);padding:18px 24px 22px}
+.settingfile.open .body{display:block;animation:panelIn .25s ease}
+
+/* ========== 阅读器 ========== */
+.reader-controls{display:flex;align-items:center;gap:14px;margin-bottom:16px;color:var(--text-muted);font-size:13px}
+.reader-controls label{display:flex;align-items:center;gap:10px}
+.reader-controls input[type=range]{accent-color:var(--accent);cursor:pointer}
+#fontSizeLabel{font-family:var(--mono);font-size:12px;min-width:38px}
+.reader{display:grid;grid-template-columns:240px minmax(0,1fr);gap:20px;align-items:start}
+.toc{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px;position:sticky;top:73px;max-height:calc(100vh - 110px);overflow-y:auto}
+.toc-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);padding:8px 10px 10px}
+.toc button{display:block;width:100%;text-align:left;border:none;background:transparent;padding:8px 10px;border-radius:var(--radius-sm);font-size:13px;color:var(--text);line-height:1.45;transition:background var(--transition-fast),color var(--transition-fast)}
+.toc button:hover{background:var(--bg-subtle)}
+.toc button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.toc .ch-no{display:block;font-size:11px;color:var(--text-muted);margin-bottom:1px}
+.toc button.active .ch-no{color:var(--accent)}
+.reader .article{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:36px 44px;min-height:400px}
+.reader .article p,.reader .article li{font-family:var(--serif)}
+.reader .article h1{font-size:26px;margin:0 0 6px}
+.readnav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 4px}
+.readnav span{font-size:13px}
+.read-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;padding-top:16px;border-top:1px solid var(--border)}
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px;margin-top:14px;position:sticky;bottom:12px}
+.search-bar input{flex:1;min-width:0;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color var(--transition-fast)}
+.search-bar input:focus{border-color:var(--accent)}
+.search-bar button{padding:6px 10px;font-size:12px}
+mark{background:var(--accent-soft);color:var(--accent);padding:0 2px;border-radius:3px}
+mark.current{background:var(--accent);color:#fff}
+
+/* ========== 角色列表 ========== */
+.char-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+
+/* ========== 滚动条 ========== */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
 /* ========== 可访问性 ========== */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -195,6 +273,8 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 /* 平板 / 窄桌面（≤1024px） */
 @media(max-width:1024px) {
   .graph-layout{grid-template-columns:1fr 240px}
+  .reader{grid-template-columns:200px minmax(0,1fr)}
+  .reader .article{padding:28px 28px}
 }
 /* 中小屏（≤820px）：tabs 移至上方面板 */
 @media(max-width:820px) {
@@ -202,8 +282,8 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
   .tabs[role="tablist"]{flex-direction:row;flex-wrap:wrap;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border)}
   main.content{padding:20px 16px 60px}
   .col2{grid-template-columns:1fr}
-  .graph-layout{grid-template-columns:1fr}
-  .graph-canvas-wrap{height:360px;min-height:360px}
+  .graph-layout{grid-template-columns:1fr;height:auto;max-height:none}
+  .graph-canvas-wrap{height:360px}
   .graph-sidebar{max-height:300px;overflow-y:auto}
 }
 /* 小屏手机（≤768px） */
@@ -211,10 +291,13 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
   .tabs[role="tablist"]{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:2px;padding:10px 8px}
   .tabs[role="tablist"] button[role="tab"]{white-space:nowrap;font-size:13px;padding:8px 10px}
   .tabs[role="tablist"] .navlabel{display:none}
-  .graph-canvas-wrap{height:320px;min-height:320px;max-height:50vh}
+  .graph-canvas-wrap{height:320px;max-height:50vh}
   .graph-sidebar{max-height:260px;overflow-y:auto}
   .reader{grid-template-columns:1fr}
-  .toc{max-height:200px;overflow-y:auto}
+  .toc{position:static;max-height:200px;overflow-y:auto}
+  .reader .article{padding:22px 18px;min-height:0}
+  .search-bar{flex-wrap:wrap;position:static}
+  .readnav{flex-wrap:wrap}
   .appbar{flex-wrap:wrap;padding:10px 16px;gap:8px}
   .appbar .booktitle{font-size:16px;max-width:60vw}
 }
@@ -231,7 +314,7 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .article img{max-width:100%}
 svg{max-width:100%;height:auto}
 /* Reader 目录在移动端可收起 */
-.toc.collapsed .toc-item{display:none}
+.toc.collapsed button{display:none}
 .toc-toggle{display:none}
 @media(max-width:768px) {
   .toc-toggle{display:inline-block}
@@ -242,8 +325,9 @@ svg{max-width:100%;height:auto}
 
 <!-- ============ 落地页 ============ -->
 <div id="landing">
-  <h1>🐉 Dragon Writer · 写作仪表盘</h1>
-  <p>选择某本书的<b>根目录</b>（即含 <code>book.json</code>、<code>chapters/</code>、<code>story/</code> 的那一层），即可查看当前进度、设定完成度、人物关系与章节阅读。</p>
+  <div class="logo" aria-hidden="true">🐉</div>
+  <h1>Dragon Writer · 写作仪表盘</h1>
+  <p>选择某本书的<b>根目录</b>（即含 <code>book.json</code>、<code>chapters/</code>、<code>story/</code> 的那一层），即可查看当前进度、设定内容、人物关系与章节阅读。</p>
   <div class="row">
     <button class="primary" id="pickBtn">📖 选择书架文件夹</button>
     <label class="filelabel">
@@ -273,7 +357,6 @@ svg{max-width:100%;height:auto}
     <nav class="tabs" role="tablist" aria-label="仪表盘视图">
       <div class="navlabel">视图</div>
       <button id="tab-overview" role="tab" aria-selected="true" aria-controls="panel-overview" tabindex="0" data-tab="overview">📊 总览</button>
-      <button id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" tabindex="-1" data-tab="settings">📐 设定完成度</button>
       <button id="tab-settings-content" role="tab" aria-selected="false" aria-controls="panel-settings-content" tabindex="-1" data-tab="settings-content">📜 设定内容</button>
       <button id="tab-chars" role="tab" aria-selected="false" aria-controls="panel-chars" tabindex="-1" data-tab="chars">👥 人物关系</button>
       <button id="tab-read" role="tab" aria-selected="false" aria-controls="panel-read" tabindex="-1" data-tab="read">📖 阅读章节</button>
@@ -283,17 +366,13 @@ svg{max-width:100%;height:auto}
         <h2>总览</h2>
         <p class="lede">本书当前的写作进度与最新状态。</p>
       </section>
-      <section class="panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
-        <h2>设定完成度</h2>
-        <p class="lede">基于书源文件中各子章节的填充情况自动计算。展开可逐项查看。</p>
-      </section>
       <section class="panel" id="panel-settings-content" role="tabpanel" aria-labelledby="tab-settings-content">
         <h2>设定内容</h2>
         <p class="lede">全部设定文件的完整原文，可在仪表盘内直接阅读。</p>
       </section>
       <section class="panel" id="panel-chars" role="tabpanel" aria-labelledby="tab-chars">
         <h2>人物关系</h2>
-        <p class="lede">点击节点查看角色详情。节点颜色区分主要 / 次要角色。</p>
+        <p class="lede">滚轮缩放 · 拖拽空白平移 · 双击适应画布。点击节点查看角色详情。</p>
         <!-- 动态渲染：Characters 组件会替换下方内容，id 由 JS 管理避免重复 -->
         <div class="graph-layout">
           <div class="graph-canvas-wrap">
@@ -316,10 +395,7 @@ svg{max-width:100%;height:auto}
 </div>
 
 <script>
-/* [build] generated by python scripts/build_dashboard.py at 2026-08-05T15:48:04.892757+00:00 */
-/* [build] generated by python scripts/build_dashboard.py at 2026-08-02T12:01:26.871526+00:00 */
-/* [build] generated by python scripts/build_dashboard.py at 2026-08-02T11:53:53.468912+00:00 */
-/* [build] generated by python scripts/build_dashboard.py at 2026-08-02T11:53:44.478539+00:00 */
+/* [build] generated by python scripts/build_dashboard.py at 2026-08-09T11:17:30.713326+00:00 */
 "use strict";
 /* ============================================================================
    Dragon Writer 仪表盘 —— 运行时。
@@ -386,6 +462,7 @@ const Utils = (() => {
         textMuted: style.getPropertyValue('--text-muted').trim() || '#6b6760',
         border: style.getPropertyValue('--border').trim() || '#e0dcd4',
         bgSubtle: style.getPropertyValue('--bg-subtle').trim() || '#efeae1',
+        bgElevated: style.getPropertyValue('--bg-elevated').trim() || '#ffffff',
         text: style.getPropertyValue('--text').trim() || '#1c1b18',
         sans: style.getPropertyValue('--sans').trim() || '-apple-system,sans-serif',
       };
@@ -1031,12 +1108,11 @@ const Router = (() => {
       if (h && componentMap[h] && h !== current) switchTab(h);
     });
 
-    // 注册快捷键 Ctrl+1~5（全局生效）
+    // 注册快捷键 Ctrl+1~4（全局生效）
     Utils.shortcuts.register('Ctrl+1', () => switchTab('overview'), 'global');
-    Utils.shortcuts.register('Ctrl+2', () => switchTab('settings'), 'global');
-    Utils.shortcuts.register('Ctrl+3', () => switchTab('settings-content'), 'global');
-    Utils.shortcuts.register('Ctrl+4', () => switchTab('chars'), 'global');
-    Utils.shortcuts.register('Ctrl+5', () => switchTab('read'), 'global');
+    Utils.shortcuts.register('Ctrl+2', () => switchTab('settings-content'), 'global');
+    Utils.shortcuts.register('Ctrl+3', () => switchTab('chars'), 'global');
+    Utils.shortcuts.register('Ctrl+4', () => switchTab('read'), 'global');
 
     // tablist 内键盘导航：左右键在 tablist 中移动焦点（非输入控件场景）
     const tablistEl = document.querySelector('.tabs[role="tablist"]');
@@ -1463,7 +1539,7 @@ const Overview = {
       <p class="lede">本书当前的写作进度与最新状态。</p>
       <div class="card" style="margin-bottom:20px;">
         <div class="ringwrap">
-          <div class="ring" style="--p:${pct}">
+          <div class="ring" style="--p:${pct}%">
             <span class="num">${pct}<span class="pct-sym">%</span></span>
           </div>
           <div>
@@ -1487,6 +1563,13 @@ const Overview = {
       <div class="section-title">文件诊断</div>
       <div id="diagnostics" class="card">${this._renderDiagnostics()}</div>
     `;
+    // 圆环从 0 过渡到目标值（@property 注册的 --p 支持过渡）
+    const ring = document.querySelector('#panel-overview .ring');
+    if (ring) {
+      const target = ring.style.getPropertyValue('--p');
+      ring.style.setProperty('--p', '0%');
+      requestAnimationFrame(() => requestAnimationFrame(() => ring.style.setProperty('--p', target)));
+    }
     this._lastVersion = Store.state.dataVersion;
   },
 
@@ -1509,7 +1592,7 @@ const Overview = {
     if (legacy.length) {
       parts.push(`<div class="drift-item"><b>旧角色格式</b><div class="muted">${Utils.escHtml(legacy.join('、'))} 暂不支持，请迁移到 story/roles/</div></div>`);
     }
-    return parts.length ? `<div class="drift-section">${parts.join('')}</div>` : '<div class="muted" style="font-size:13px">无异常';
+    return parts.length ? `<div class="drift-section">${parts.join('')}</div>` : '<div class="muted" style="font-size:13px">无异常</div>';
   },
 
   _renderStats(book, chapters, totalWords) {
@@ -1572,13 +1655,13 @@ const Overview = {
       if (!m || !m[1].trim()) return '';
       return m[1];
     };
-    const renderDriftSection = (title, body) => {
+    const renderDriftSection = (title, body, cls) => {
       const items = body.split(/\n###\s+/).filter(Boolean);
-      return `<div class="drift-section"><div class="drift-title">${title}</div>` +
+      return `<div class="drift-section"><div class="drift-title ${cls}">${title}</div>` +
         items.map(it => {
           const li = it.split('\n').filter(l => l.trim());
           const head = li.shift() || '';
-          return `<div class="drift-item"><b>${Utils.escHtml(head.trim().replace(/^第\d+章 · /, ''))}</b>` +
+          return `<div class="drift-item ${cls}"><b>${Utils.escHtml(head.trim().replace(/^第\d+章 · /, ''))}</b>` +
             li.map(l => `<div class="muted">${Utils.escHtml(l.replace(/^-\s*/, '').trim())}</div>`).join('') +
             `</div>`;
         }).join('') + `</div>`;
@@ -1586,8 +1669,8 @@ const Overview = {
     const fixed = section('已修复');
     const open = section('已知漂移');
     let out = '';
-    if (fixed) out += renderDriftSection('已修复', fixed);
-    if (open) out += renderDriftSection('已知漂移', open);
+    if (fixed) out += renderDriftSection('已修复', fixed, 'is-fixed');
+    if (open) out += renderDriftSection('已知漂移', open, 'is-open');
     return out || `<div class="article">${MDParser.parse(text)}</div>`;
   },
 
@@ -1664,66 +1747,6 @@ function computeSettingCompletion(files) {
     return { key: d.key, title: d.title, present: true, pct, items };
   });
 }
-
-/* ---------- Settings 组件（设定完成度） ---------- */
-const Settings = {
-  _lastVersion: -1,
-
-  onEnter() {
-    if (Store.state.dataVersion !== this._lastVersion) this.render();
-  },
-
-  render() {
-    const files = Store.get('files');
-    const completion = computeSettingCompletion(files);
-
-    Store.set('settings', completion);
-
-    document.getElementById('panel-settings').innerHTML = `
-      <h2>设定完成度</h2>
-      <p class="lede">基于书源文件中各子章节的填充情况自动计算。展开可逐项查看。</p>
-      ${completion.map((d, idx) => `
-        <div class="card domain" id="dom-${idx}">
-          <div class="row" tabindex="0" role="button" aria-expanded="${d.pct < 100}">
-            <span class="chev">▶</span>
-            <span class="name">${Utils.escHtml(d.title)}</span>
-            ${d.present ? `<span class="pct" style="color:${this._pctColor(d.pct)}">${d.pct}%</span>` : '<span class="pct muted">未找到</span>'}
-          </div>
-          <div class="progress-wrap" style="margin-left:16px;">
-            <div class="progress-bar">
-              <span style="width:${d.pct}%;background:${this._pctColor(d.pct)}"></span>
-            </div>
-          </div>
-          <ul>${d.items.map(it => `<li class="${it.ok ? 'ok' : ''}">${Utils.escHtml(it.label)}</li>`).join('')}</ul>
-        </div>
-      `).join('')}
-    `;
-
-    completion.forEach((d, idx) => {
-      const el = document.getElementById('dom-' + idx);
-      if (!el) return;
-      const row = el.querySelector('.row');
-      row.addEventListener('click', () => {
-        el.classList.toggle('open');
-        row.setAttribute('aria-expanded', el.classList.contains('open'));
-      });
-      row.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); }
-      });
-      if (d.pct < 100) el.classList.add('open');
-    });
-
-    this._lastVersion = Store.state.dataVersion;
-  },
-
-  _pctColor(pct) {
-    if (pct < 30) return 'var(--danger)';
-    if (pct < 70) return 'var(--warning)';
-    return 'var(--success)';
-  },
-
-  onLeave() {},
-};
 
 /* ---------- SettingsContent 组件（设定原文） ---------- */
 const SettingsContent = {
@@ -1821,18 +1844,28 @@ const buildGraph = (roles) => {
 
 /* ---------- GraphEngine 力导向关系图 ---------- */
 const GraphEngine = (() => {
-  let canvas, ctx, W = 0, H = 0;
+  let canvas, ctx, W = 0, H = 0, dpr = 1;
   let nodes = [], edges = [];
-  let selected = -1, dragging = -1;
+  let adjList = []; // 邻接表：nodes[i] 的邻居集合，避免每次全量扫描 edges
+  let selected = -1, dragging = -1, hovered = -1;
   let raf = null;
   let physicsRunning = false;
   let settledCount = 0;
   let frameCount = 0; // 模拟帧计数，防止大角色图无限运行
   let resizeHandler = null; // 保存 resize handler 引用，供 destroy 移除
+  // 视口变换：screen = world * scale + offset（节点坐标全部在世界坐标系中）
+  let scale = 1, ox = 0, oy = 0;
+  let panning = false, panStart = null;
+  const MIN_SCALE = 0.25, MAX_SCALE = 3;
   const SETTLE_THRESHOLD = 0.5;
   const SETTLE_FRAMES = 10;
   const MAX_PHYSICS_FRAMES = 600; // 最多模拟 600 帧（约 10 秒），超时即停止
   const LARGE_GRAPH_THRESHOLD = 80; // 节点数超过此值视为大型关系图，降低迭代频率
+  const WORLD_BOUND = 2400; // 世界坐标软边界，防止节点飞散
+
+  const isMinorNode = n => /次要|minor/.test(n.tier);
+
+  const toWorld = (mx, my) => ({ x: (mx - ox) / scale, y: (my - oy) / scale });
 
   const init = (cvs, gdata) => {
     // 重新初始化前先 destroy，避免监听器泄漏
@@ -1842,78 +1875,161 @@ const GraphEngine = (() => {
     ctx = canvas.getContext('2d');
     selected = -1;
     dragging = -1;
+    hovered = -1;
+    panning = false;
+    panStart = null;
+    scale = 1; ox = 0; oy = 0;
     physicsRunning = false;
     settledCount = 0;
 
     const resize = () => {
       const r = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      dpr = window.devicePixelRatio || 1;
       canvas.width = r.width * dpr;
       canvas.height = r.height * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      // 保留节点相对位置：按新尺寸缩放坐标，避免节点飞出画布
-      const scaleX = W > 0 ? r.width / W : 1;
-      const scaleY = H > 0 ? r.height / H : 1;
       W = r.width;
       H = r.height;
-      for (const n of nodes) {
-        n.x = Math.max(30, Math.min(W - 30, n.x * scaleX));
-        n.y = Math.max(30, Math.min(H - 30, n.y * scaleY));
-      }
-      // resize 完成后主动重绘，避免物理模拟已停止时留下空白
+      // 节点在世界坐标系中，resize 不影响其位置，只需重绘
       draw();
     };
     resize();
     resizeHandler = resize;
     window.addEventListener('resize', resize);
 
-    nodes = gdata.nodes.map((n, i) => ({
-      ...n,
-      x: W / 2 + (Math.random() - 0.5) * 200,
-      y: H / 2 + (Math.random() - 0.5) * 200,
-      vx: 0, vy: 0,
-    }));
+    // 初始布局：主要角色在内圈、次要角色在外圈，均匀分布，避免开局乱成一团
+    const majorCount = gdata.nodes.filter(n => !isMinorNode(n)).length;
+    const minorCount = gdata.nodes.length - majorCount;
+    let mi = 0, ni = 0;
+    nodes = gdata.nodes.map(n => {
+      const minor = isMinorNode(n);
+      const idx = minor ? ni++ : mi++;
+      const total = minor ? minorCount : majorCount;
+      const R = minor ? Math.max(230, total * 24) : Math.max(120, total * 42);
+      const a = (idx / Math.max(1, total)) * Math.PI * 2 - Math.PI / 2 + (minor ? 0.25 : 0);
+      return {
+        ...n,
+        x: Math.cos(a) * R + (Math.random() - 0.5) * 30,
+        y: Math.sin(a) * R + (Math.random() - 0.5) * 30,
+        vx: 0, vy: 0, deg: 0, r: minor ? 14 : 18,
+      };
+    });
     edges = gdata.edges;
+    // 预计算度数、半径与邻接表
+    adjList = nodes.map(() => new Set());
+    for (const e of edges) {
+      nodes[e.s].deg++; nodes[e.t].deg++;
+      adjList[e.s].add(e.t); adjList[e.t].add(e.s);
+    }
+    for (const n of nodes) n.r = (isMinorNode(n) ? 14 : 18) + Math.min(14, n.deg * 2);
 
     // 事件绑定
     canvas.onpointerdown = (e) => {
       const h = hitTest(e);
-      dragging = h;
       if (h >= 0) {
+        dragging = h;
         selectNode(h);
         // 拖拽时恢复物理模拟
         if (!physicsRunning) start();
-        // 捕获指针，确保拖拽期间指针移出 canvas 仍能接收事件
-        try { canvas.setPointerCapture(e.pointerId); } catch {}
+      } else {
+        // 空白处：开始平移
+        panning = true;
+        const r = canvas.getBoundingClientRect();
+        panStart = { x: e.clientX - r.left, y: e.clientY - r.top, ox, oy };
+        canvas.style.cursor = 'grabbing';
       }
+      // 捕获指针，确保拖拽/平移期间指针移出 canvas 仍能接收事件
+      try { canvas.setPointerCapture(e.pointerId); } catch {}
     };
     canvas.onpointermove = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
       if (dragging >= 0) {
-        const r = canvas.getBoundingClientRect();
-        nodes[dragging].x = e.clientX - r.left;
-        nodes[dragging].y = e.clientY - r.top;
+        const w = toWorld(mx, my);
+        nodes[dragging].x = w.x;
+        nodes[dragging].y = w.y;
         nodes[dragging].vx = 0;
         nodes[dragging].vy = 0;
+        return;
       }
-      canvas.style.cursor = hitTest(e) >= 0 ? 'pointer' : 'grab';
+      if (panning && panStart) {
+        ox = panStart.ox + (mx - panStart.x);
+        oy = panStart.oy + (my - panStart.y);
+        draw();
+        return;
+      }
+      // 悬停高亮邻居
+      const h = hitTest(e);
+      canvas.style.cursor = h >= 0 ? 'pointer' : 'grab';
+      if (h !== hovered) { hovered = h; draw(); }
     };
-    canvas.onpointerup = (e) => {
-      if (dragging >= 0) {
+    const endPointer = (e) => {
+      if (dragging >= 0 || panning) {
         try { canvas.releasePointerCapture(e.pointerId); } catch {}
       }
       dragging = -1;
+      if (panning) { panning = false; panStart = null; canvas.style.cursor = 'grab'; }
     };
+    canvas.onpointerup = endPointer;
     // 指针取消（如触屏来电）时安全结束拖拽
-    canvas.onpointercancel = (e) => {
-      if (dragging >= 0) {
-        try { canvas.releasePointerCapture(e.pointerId); } catch {}
-      }
-      dragging = -1;
+    canvas.onpointercancel = endPointer;
+    // 双击空白处：适应画布
+    canvas.ondblclick = (e) => { if (hitTest(e) < 0) zoomFit(); };
+    // 滚轮：以光标为中心缩放
+    canvas.onwheel = (e) => {
+      e.preventDefault();
+      const r = canvas.getBoundingClientRect();
+      zoomBy(Math.exp(-e.deltaY * 0.0012), e.clientX - r.left, e.clientY - r.top);
     };
-    // 缩放未实现，不拦截 wheel 事件（保留注释供后续实现）
-    // canvas.onwheel = (e) => { e.preventDefault(); /* 缩放实现 */ };
 
+    zoomFit();
     start();
+  };
+
+  /* ---------- 视口控制 ---------- */
+  const contentBBox = () => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of nodes) {
+      minX = Math.min(minX, n.x - n.r - 14);
+      minY = Math.min(minY, n.y - n.r - 14);
+      maxX = Math.max(maxX, n.x + n.r + 14);
+      maxY = Math.max(maxY, n.y + n.r + 28); // 下方名称
+    }
+    return { minX, minY, maxX, maxY };
+  };
+
+  // 以适应方式把全部节点收入视野
+  const zoomFit = () => {
+    if (!canvas || !nodes.length || !W || !H) return;
+    const b = contentBBox();
+    const bw = Math.max(1, b.maxX - b.minX), bh = Math.max(1, b.maxY - b.minY);
+    scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.min(W / bw, H / bh) * 0.92));
+    ox = W / 2 - (b.minX + b.maxX) / 2 * scale;
+    oy = H / 2 - (b.minY + b.maxY) / 2 * scale;
+    draw();
+  };
+
+  // 恢复 100% 缩放（内容居中）
+  const zoomReset = () => {
+    if (!canvas || !nodes.length || !W || !H) return;
+    const b = contentBBox();
+    scale = 1;
+    ox = W / 2 - (b.minX + b.maxX) / 2;
+    oy = H / 2 - (b.minY + b.maxY) / 2;
+    draw();
+  };
+
+  // 以画布上某点为中心缩放（默认画布中心），该点对应的世界坐标保持不动
+  const zoomBy = (f, cx, cy) => {
+    if (!canvas) return;
+    if (cx === undefined) cx = W / 2;
+    if (cy === undefined) cy = H / 2;
+    const ns = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * f));
+    if (ns === scale) return;
+    const wx = (cx - ox) / scale, wy = (cy - oy) / scale;
+    scale = ns;
+    ox = cx - wx * scale;
+    oy = cy - wy * scale;
+    draw();
   };
 
   const start = () => {
@@ -1956,12 +2072,17 @@ const GraphEngine = (() => {
       canvas.onpointerdown = null;
       canvas.onpointermove = null;
       canvas.onpointerup = null;
+      canvas.onpointercancel = null;
+      canvas.ondblclick = null;
       canvas.onwheel = null;
     }
     canvas = null;
     ctx = null;
     nodes = [];
     edges = [];
+    adjList = [];
+    panning = false;
+    panStart = null;
   };
 
   const loop = () => {
@@ -2008,21 +2129,21 @@ const GraphEngine = (() => {
       }
     }
 
-    // 中心引力
+    // 中心引力（世界坐标原点）
     for (const n of nodes) {
-      n.vx += (W / 2 - n.x) * 0.0012;
-      n.vy += (H / 2 - n.y) * 0.0012;
+      n.vx += (0 - n.x) * 0.0012;
+      n.vy += (0 - n.y) * 0.0012;
     }
 
-    // 更新位置
+    // 更新位置（世界坐标软边界，防止节点飞散到不可见区域）
     let totalSpeed = 0;
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i];
       if (i !== dragging) {
         n.x += n.vx;
         n.y += n.vy;
-        n.x = Math.max(30, Math.min(W - 30, n.x));
-        n.y = Math.max(30, Math.min(H - 30, n.y));
+        n.x = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, n.x));
+        n.y = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, n.y));
       }
       totalSpeed += Math.abs(n.vx) + Math.abs(n.vy);
     }
@@ -2051,68 +2172,120 @@ const GraphEngine = (() => {
     raf = requestAnimationFrame(loop);
   };
 
+  // 圆角矩形路径（兼容无 ctx.roundRect 的环境）
+  const rr = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  };
+
   const draw = () => {
     // ctx 或 canvas 为空时安全返回
     if (!ctx || !canvas || !W || !H) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
+    const sans = Utils.theme.get('sans');
     if (!nodes.length) {
       ctx.fillStyle = Utils.theme.get('textMuted');
-      ctx.font = '14px ' + Utils.theme.get('sans');
+      ctx.font = '14px ' + sans;
       ctx.textAlign = 'center';
       ctx.fillText('暂无角色数据', W / 2, H / 2);
       return;
     }
 
+    // 应用视口变换：之后全部在世界坐标系中绘制
+    ctx.translate(ox, oy);
+    ctx.scale(scale, scale);
+
     const accent = Utils.theme.get('accent');
-    const lineColor = Utils.theme.get('border');
     const labelColor = Utils.theme.get('textMuted');
-    const bgSoft = Utils.theme.get('bgSubtle');
+    const bgElevated = Utils.theme.get('bgElevated') || '#ffffff';
     const minorColor = Utils.theme.get('textMuted');
     const textColor = Utils.theme.get('text');
-    const sans = Utils.theme.get('sans');
+    const borderColor = Utils.theme.get('border');
 
-    // 连线
-    for (const e of edges) {
+    // 焦点：优先选中节点，其次悬停节点
+    const focus = selected >= 0 ? selected : hovered;
+    const isConnected = (e, i) => e.s === i || e.t === i;
+
+    // 连线（二次曲线，按边确定性弯曲，避免平行边重叠）
+    const placedLabels = []; // 本帧已放置的边标签矩形，用于碰撞检测
+    for (let ei = 0; ei < edges.length; ei++) {
+      const e = edges[ei];
       const a = nodes[e.s], b = nodes[e.t];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      // 确定性弯向：同一边每次绘制弯曲方向一致
+      const bend = ((e.s * 31 + e.t * 17) % 2 === 0 ? 1 : -1) * Math.min(26, d * 0.12);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const cxp = mx - (dy / d) * bend, cyp = my + (dx / d) * bend;
+
+      const highlighted = focus >= 0 && isConnected(e, focus);
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.strokeStyle = lineColor;
-      ctx.globalAlpha = selected >= 0 && (e.s === selected || e.t === selected) ? 0.8 : 0.25;
-      ctx.lineWidth = selected >= 0 && (e.s === selected || e.t === selected) ? 2.5 : 1.2;
+      ctx.quadraticCurveTo(cxp, cyp, b.x, b.y);
+      if (highlighted) {
+        ctx.strokeStyle = accent;
+        ctx.globalAlpha = 0.9;
+        ctx.lineWidth = 2.2;
+      } else {
+        ctx.strokeStyle = labelColor;
+        ctx.globalAlpha = focus >= 0 ? 0.07 : 0.45;
+        ctx.lineWidth = 1.4;
+      }
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      // 边标签：关系标签过长时截断并提供完整提示
-      if (e.label && (selected < 0 || e.s === selected || e.t === selected)) {
-        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      // 边标签：缩放过小时隐藏（防杂乱）；有焦点时只显示与焦点相连的
+      const showLabel = e.label && (focus >= 0 ? isConnected(e, focus) : scale >= 0.85);
+      if (showLabel) {
+        // 二次曲线 t=0.5 处的中点
+        const lx = 0.25 * a.x + 0.5 * cxp + 0.25 * b.x;
+        const ly = 0.25 * a.y + 0.5 * cyp + 0.25 * b.y;
         const MAX_LABEL_LEN = 8;
         const isLong = e.label.length > MAX_LABEL_LEN;
         const txt = isLong ? e.label.slice(0, MAX_LABEL_LEN) + '…' : e.label;
         ctx.font = '11px ' + sans;
         const tw = ctx.measureText(txt).width;
-        ctx.fillStyle = bgSoft;
-        ctx.fillRect(mx - tw / 2 - 4, my - 7, tw + 8, 14);
-        ctx.fillStyle = labelColor;
+        const rect = { x: lx - tw / 2 - 5, y: ly - 8, w: tw + 10, h: 16 };
+        // 碰撞检测：与已放置的标签重叠则跳过，避免文字互相覆盖
+        const collides = placedLabels.some(p =>
+          rect.x < p.x + p.w && rect.x + rect.w > p.x && rect.y < p.y + p.h && rect.y + rect.h > p.y);
+        if (collides) continue;
+        placedLabels.push(rect);
+        // 药丸底色 + 细边框，保证标签在任何连线上都清晰可读
+        rr(rect.x, rect.y, rect.w, rect.h, 8);
+        ctx.fillStyle = highlighted ? accent : bgElevated;
+        ctx.globalAlpha = highlighted ? 0.95 : 0.9;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = highlighted ? accent : borderColor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = highlighted ? '#fff' : labelColor;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(txt, mx, my);
+        ctx.fillText(txt, lx, ly + 0.5);
         // 长标签通过 title 属性提供完整提示
-        if (isLong && canvas) {
-          canvas.title = e.label;
-        }
+        if (isLong && canvas) canvas.title = e.label;
       }
     }
 
     // 节点（不只依赖颜色区分角色层级：主要角色用圆形+实心，次要角色用方形+虚边）
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i];
-      const r = 18 + Math.min(14, edges.filter(e => e.s === i || e.t === i).length * 2);
-      const isDimmed = selected >= 0 && i !== selected && !edges.some(e => (e.s === selected && e.t === i) || (e.t === selected && e.s === i));
-      const isMinor = /次要|minor/.test(n.tier);
+      const r = n.r;
+      const isFocus = focus === i;
+      const isNeighbor = focus >= 0 && adjList[focus] && adjList[focus].has(i);
+      const isDimmed = focus >= 0 && !isFocus && !isNeighbor;
+      const isMinor = isMinorNode(n);
 
-      ctx.globalAlpha = isDimmed ? 0.3 : 1;
+      ctx.globalAlpha = isDimmed ? 0.22 : 1;
       ctx.fillStyle = isMinor ? minorColor : accent;
 
       if (isMinor) {
@@ -2131,36 +2304,51 @@ const GraphEngine = (() => {
       }
       ctx.globalAlpha = 1;
 
+      // 选中 / 悬停描边
       if (i === selected) {
         ctx.lineWidth = 3;
         ctx.strokeStyle = accent;
         ctx.beginPath();
-        ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, r + 2, 0, Math.PI * 2);
         ctx.stroke();
+      } else if (i === hovered && i !== selected) {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = accent;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
       }
 
-      // 节点内文字
-      ctx.fillStyle = '#fff';
-      ctx.font = Math.round(r * 0.7) + 'px ' + sans;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(n.name.slice(0, 3), n.x, n.y);
+      // 节点内文字：节点过小时省略，避免糊成一团
+      if (r * scale >= 9) {
+        ctx.fillStyle = '#fff';
+        ctx.font = Math.round(r * 0.62) + 'px ' + sans;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(n.name.slice(0, 3), n.x, n.y);
+      }
 
-      // 节点下方名称
-      ctx.fillStyle = isDimmed ? labelColor : textColor;
-      ctx.font = '12px ' + sans;
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(n.name, n.x, n.y + r + 12);
+      // 节点下方名称：缩小时只保留主要角色与焦点相关节点，避免标签互相覆盖
+      const showName = scale >= 0.55 || !isMinor || isFocus || isNeighbor;
+      if (showName) {
+        ctx.fillStyle = isDimmed ? labelColor : textColor;
+        ctx.font = (isMinor ? '11px ' : '12px ') + sans;
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.name, n.x, n.y + r + 13);
+      }
     }
   };
 
   const hitTest = (e) => {
     const r = canvas.getBoundingClientRect();
-    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    const w = toWorld(e.clientX - r.left, e.clientY - r.top);
     for (let i = nodes.length - 1; i >= 0; i--) {
       const n = nodes[i];
-      const radius = 18 + Math.min(14, edges.filter(ed => ed.s === i || ed.t === i).length * 2);
-      if ((mx - n.x) ** 2 + (my - n.y) ** 2 < radius ** 2) return i;
+      const radius = n.r + 3;
+      if ((w.x - n.x) ** 2 + (w.y - n.y) ** 2 < radius ** 2) return i;
     }
     return -1;
   };
@@ -2201,7 +2389,7 @@ const GraphEngine = (() => {
   // 公开 resize 方法，供标签切换时重新计算 canvas 尺寸
   const triggerResize = () => { if (canvas && ctx) resize(); };
 
-  return { init, start, pause, resume, destroy, redraw, selectNode, hitTest, triggerResize };
+  return { init, start, pause, resume, destroy, redraw, selectNode, hitTest, triggerResize, zoomBy, zoomFit, zoomReset };
 })();
 
 /* ---------- Characters 组件（人物关系） ---------- */
@@ -2238,7 +2426,7 @@ const Characters = {
 
     document.getElementById('panel-chars').innerHTML = `
       <h2>人物关系</h2>
-      <p class="lede">点击节点查看角色详情。节点颜色区分主要 / 次要角色。</p>
+      <p class="lede">滚轮缩放 · 拖拽空白平移 · 双击适应画布。点击节点查看角色详情。</p>
       <div class="char-controls">
         <input type="search" id="charSearch" placeholder="搜索角色名称..." class="search-input">
         <select id="charFilter" class="filter-select">
@@ -2251,6 +2439,13 @@ const Characters = {
       <div class="graph-layout">
         <div class="graph-canvas-wrap">
           <canvas id="graph"></canvas>
+          <div class="graph-tools">
+            <button id="graphZoomIn" title="放大" aria-label="放大">＋</button>
+            <button id="graphZoomOut" title="缩小" aria-label="缩小">－</button>
+            <button id="graphFit" title="适应画布" aria-label="适应画布">⛶</button>
+            <button id="graphReset" title="重置为 100%" aria-label="重置为 100%">1:1</button>
+          </div>
+          <div class="graph-hint">滚轮缩放 · 拖拽平移 · 双击适应</div>
         </div>
         <div class="graph-sidebar">
           <div class="card" id="graphInfo">
@@ -2266,6 +2461,10 @@ const Characters = {
     requestAnimationFrame(() => {
       GraphEngine.init(document.getElementById('graph'), graph);
     });
+    document.getElementById('graphZoomIn').addEventListener('click', () => GraphEngine.zoomBy(1.3));
+    document.getElementById('graphZoomOut').addEventListener('click', () => GraphEngine.zoomBy(1 / 1.3));
+    document.getElementById('graphFit').addEventListener('click', () => GraphEngine.zoomFit());
+    document.getElementById('graphReset').addEventListener('click', () => GraphEngine.zoomReset());
     this._renderCharList(graph.nodes);
     this._renderGraphTextAlt(graph);
 
@@ -2317,9 +2516,9 @@ const Characters = {
     });
     document.getElementById('charList').innerHTML = filtered.length
       ? filtered.map(nd => `
-        <div class="charcard" data-i="${nd.i}">
-          <div class="name">${Utils.escHtml(nd.name)}</div>
-          <div class="tier">${Utils.escHtml(nd.tier)}${nd.func ? ' · ' + MDParser.parseInline(nd.func) : ''}</div>
+        <div class="charcard ${/次要|minor/.test(nd.tier) ? 'minor' : 'major'}" data-i="${nd.i}">
+          <div class="name">${Utils.escHtml(nd.name)}<span class="tier-badge ${/次要|minor/.test(nd.tier) ? 'minor' : 'major'}">${/次要|minor/.test(nd.tier) ? '次要' : '主要'}</span></div>
+          ${nd.func ? `<div class="tier">${MDParser.parseInline(nd.func)}</div>` : ''}
           ${nd.desire ? `<div class="kv"><b>欲</b>${MDParser.parseInline(nd.desire)}</div>` : ''}
           ${nd.fear ? `<div class="kv"><b>惧</b>${MDParser.parseInline(nd.fear)}</div>` : ''}
           ${nd.state ? `<div class="kv"><b>今</b>${MDParser.parseInline(nd.state)}</div>` : ''}
@@ -2817,13 +3016,12 @@ const initApp = () => {
   });
 
   Router.register('overview', Overview);
-  Router.register('settings', Settings);
   Router.register('settings-content', SettingsContent);
   Router.register('chars', Characters);
   Router.register('read', Reader);
 
   // 标签键盘导航（全局注册；Reader 标签中同名键会优先匹配 Reader 的处理器）
-  const tabList = ['overview', 'settings', 'settings-content', 'chars', 'read'];
+  const tabList = ['overview', 'settings-content', 'chars', 'read'];
   const switchTabAndFocus = (tab) => {
     Router.switchTab(tab);
     // 切换后焦点移动到新 tab
