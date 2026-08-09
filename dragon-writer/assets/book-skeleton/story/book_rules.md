@@ -13,3 +13,10 @@
 ## 风格约束 Style Constraints
 
 ## 年代约束 Era Constraints
+
+## 逻辑数据维度 Logical Data Dimensions
+> 角色卡「逻辑数据时间线」的维度列清单。新书写角色卡前先在此声明维度。
+
+| dim_id | 维度名 | 单位/取值口径 | 说明 |
+| --- | --- | --- | --- |
+| dim-001 |  |  |  |
