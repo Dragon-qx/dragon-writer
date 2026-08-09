@@ -256,7 +256,7 @@ def cmd_check(args: argparse.Namespace) -> int:
             print("[update] 自动更新已禁用")
         return 0
 
-    # auto_check=false（默认）时，启动期 check 静默跳过，避免联网覆盖本地未提交工作；
+    # auto_check=false 时，启动期 check 静默跳过，避免联网覆盖本地未提交工作；
     # 用 --force 显式触发，或 status 子命令只查远程版本不下载。
     if not update_config.get("auto_check", True) and not getattr(args, "force", False):
         if args.verbose:

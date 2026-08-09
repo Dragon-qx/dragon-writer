@@ -1,6 +1,6 @@
 # Dragon Writer 🐉
 
-一套**工具无关**（tool-neutral）的**长篇虚构小说写作工作流**，以 Claude Code Skill 形态交付，也可在 Codex / opencode 中使用。
+一套**工具无关**（tool-neutral）的**长篇虚构小说写作工作流**，兼容各类 AI 编码 agent 使用。
 
 Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续写**的"文件圣经"，外加一份给作者自己看的**实时进度仪表盘**。**全程不靠记忆，靠文件**。
 
@@ -27,18 +27,19 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 | 模式 | 触发时机 | 做什么 |
 | --- | --- | --- |
 | **A · 新书** | 一句灵感 / 书名 / 题材 | 建目录、一口气产出全部基础文件骨架（意图 / 故事框架 / 卷纲 / 角色 / 规则 / 状态 / 钩子） |
-| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（9 项驻场初筛 + 41 个候选深化审计维度 · 审-改循环） → 落盘 |
+| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（9 项驻场初筛 + 43 个候选深化审计维度 · 审-改循环） → 落盘 |
 | **C · 导入** | 手里有旧章节，缺状态文件 | 从旧章反推基础文件，回放导入章节，续写 |
 | **D · 转向** | "换方向 / 下一章写 X" | 轻量调 `current_focus.md`，不改整份大纲 |
 | **E · 改写 / 修复** | 重写某一章 | **三步回滚机械**：恢复快照 → 清后续产物 → 重写 → 再走双层质检 |
 | **F · 仪表盘** | 看进度 / 关系 / 读章节 | 确保书文件夹下有模板，**双击 HTML 打开**，权限仍有效时自动重连（不承诺永久零交互） |
+| **G · 合并审核** | 写完一章 / 连续写完多章后 | 把选定章节合并，子代理统一跑 43 维（时间线 / 设定冲突 / 伏笔 / 去 AI 味…），留痕审计漂移 |
 
 ### 双层质量门禁
 
 写一章不是写完就定稿，而是过两层：
 
 1. **驻场初筛（9 点）**——主角是否按动机行动、有没有人知道不该知道的、**空间是否一致、口袋里东西有没有无痕 ±1、常识是否合理**……直接、快速。
-2. **41 个候选深化审计维度连续审计 + 审-改循环**——按体裁裁剪出本章节要跑的维度清单（仙侠默认 20–24 维），逐维出报告 → 修订 → **回头从第 1 维再过一遍**（防修 A 打坏 B） → 留痕审计漂移。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
+2. **43 个候选深化审计维度连续审计 + 审-改循环**——按体裁裁剪出本章节要跑的维度清单（仙侠默认 22–26 维），逐维出报告 → 修订 → **回头从第 1 维再过一遍**（防修 A 打坏 B） → 留痕审计漂移。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
 
 ### 写作仪表盘（双击即用）
 
@@ -74,7 +75,7 @@ dragon-writer/
     file-contract.md               # 规范布局 + 文件职责 + 权威顺序 + 事务流程 + 快照契约 + Schema
     file-contract.json             # 机器可读文件契约（canonical + aliases + required + consumer）
     templates.md                   # 全部基础文件模板（含新增模板）
-    audit-dimensions.md            # 41 维：判定规则 + 分级 + 体裁裁剪 + 四态结果 + 风险驱动 + 维度边界
+    audit-dimensions.md            # 43 维：判定规则 + 分级 + 体裁裁剪 + 四态结果 + 风险驱动 + 维度边界
     workflow.md                    # 路由到各模式文件
     workflow-new-book.md           # 模式 A：创建新书
     workflow-continue.md           # 模式 B：续写
@@ -82,6 +83,7 @@ dragon-writer/
     workflow-redirect.md           # 模式 D：转向
     workflow-rewrite.md            # 模式 E：改写 / 修复
     workflow-dashboard.md          # 模式 F：仪表盘
+    workflow-combined-audit.md     # 模式 G：合并审核
   assets/
     dashboard.html                 # 运行时仪表盘模板（零嵌入数据，构建产物）
     book-skeleton/                 # 书籍骨架（init_book 直接复制）
@@ -144,7 +146,7 @@ dragon-writer/
 
 ## 如何使用
 
-### 触发 Dragon Writer（在 Claude Code 中对话）
+### 触发 Dragon Writer
 
 - "帮我写一本仙侠新书，叫《霜寒之纪》" → 模式 A
 - "继续写《霜寒之纪》的下一章" → 模式 B
@@ -152,6 +154,7 @@ dragon-writer/
 - "下一章要转到陆恒被追杀" → 模式 D
 - "重写第 23 章" → 模式 E
 - "看看《霜寒之纪》的进度" → 模式 F
+- "把前 5 章合并统一审一遍" → 模式 G
 
 ### 打开写作仪表盘
 
@@ -166,7 +169,7 @@ xdg-open books/<book-id>/dashboard.html    # Linux
 
 ### 前置条件
 
-- 一个读过 `references/file-contract.md` 的 LLM（由 Claude Code 等代理提供）。
+- 一个读过 `references/file-contract.md` 的 LLM agent。
 - 任意文件读写能力（Read / Write / Edit 或等价工具）。
 - 浏览器支持 File System Access API（**Chrome / Edge 86+**；Safari / Firefox 走 `webkitdirectory` 兼容模式）。
 
@@ -180,7 +183,8 @@ xdg-open books/<book-id>/dashboard.html    # Linux
 | 每种模式的具体步骤 | [references/workflow.md](references/workflow.md) |
 | 规范布局 + 文件职责 + 权威顺序 | [references/file-contract.md](references/file-contract.md) |
 | 基础文件模板（新建 / 回填时照抄） | [references/templates.md](references/templates.md) |
-| **41 个候选深化审计维度**的规则、分级、体裁裁剪 | [references/audit-dimensions.md](references/audit-dimensions.md) |
+| **43 个候选深化审计维度**的规则、分级、体裁裁剪 | [references/audit-dimensions.md](references/audit-dimensions.md) |
+| 合并审核（模式 G）流程 | [references/workflow-combined-audit.md](references/workflow-combined-audit.md) |
 | 仪表盘模板 | [assets/dashboard.html](assets/dashboard.html) |
 | 仪表盘总览标签截图 | [references/tab-overview.png](references/tab-overview.png) |
 

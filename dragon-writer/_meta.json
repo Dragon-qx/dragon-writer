@@ -1,15 +1,15 @@
 {
   "slug": "d-writer",
   "name": "dragon-writer",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "namespace": "@user_59dee265/d-writer",
-  "description": "长篇虚构小说写作工作流（兼容 opencode / Claude Code / Codex）：用大纲、设定、角色、规则、钩子、状态文件创建新书；读取已有大纲/设定/章节库续写；在保持连贯性、作者意图、当前焦点与持久故事态的前提下，规划、起草、审计、修订、落盘各章节。附带可视化仪表盘。",
+  "description": "用于需要持久故事状态与连续性审计的长篇虚构小说项目：创建新书、续写章节、导入旧稿、调整方向、改写章节、安全回滚，或在多会话间阅读 / 重建大纲与设定文件。工具无关，兼容各类 agent。附带可视化仪表盘。",
   "homepage": "https://api.skillhub.cn/user_59dee265/d-writer",
   "update": {
     "enabled": true,
     "check_url": "https://api.skillhub.cn/api/v1/search?q=d-writer",
     "install_dir": ".",
-    "auto_check": false,
+    "auto_check": true,
     "skip_on_error": true
   }
 }
