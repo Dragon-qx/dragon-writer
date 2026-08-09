@@ -74,11 +74,13 @@
 | `references/workflow-new-book.md` | 「写角色档案」步骤更新：稳定属性 + 首行基线时间线 |
 | `references/audit-dimensions.md` | 维 4（战力崩坏）以逻辑时间线为境界/战力权威来源；维 40（服装外貌）以物理时间线为外貌权威来源 |
 | `SKILL.md` | 第 17 行 Foundation/Runtime 说明补「角色卡数据时间线」 |
+| `scripts/snapshot_book.py` | 快照文件收集支持 `story/roles/**` glob 展开 |
+| `scripts/rollback_book.py` | 恢复点收集（同 snapshot_files）支持同一 glob 展开 |
 
 ### 4. 快照与脚本
 
-- `scripts/snapshot_book.py` 无需改代码：快照清单来自 `_contract.snapshot_files()`，更新 `file-contract.json` 即可让角色卡进入快照。
 - `references/file-contract.json` 的 `snapshotFiles.paths` 增加 `story/roles/**`（含 major/minor 及兼容目录名）。
+- **脚本需支持 glob 展开**：`snapshot_files()` 返回的 `story/roles/**` 是通配路径，`snapshot_book.py` 与 `rollback_book.py` 目前用 `os.path.isfile` 逐条检查，**不会展开通配符**。需在这两处把 `isfile` 检查改为 glob 匹配（`glob.glob` + `os.path.isfile`），或在 `_contract.snapshot_files()` 返回前展开为实际文件清单。二者必须使用同一展开逻辑，避免快照写入与回滚读取的路径集不一致。
 
 ### 5. 仪表盘兼容
 
