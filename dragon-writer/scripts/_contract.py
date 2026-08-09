@@ -6,6 +6,7 @@ validate_book / snapshot_book / rollback_book / init_book / build_dashboard
 避免各脚本各自硬编码副本导致漂移。文档、脚本、仪表盘共用这一份。
 """
 
+import glob
 import hashlib
 import json
 import os
@@ -56,6 +57,29 @@ def recommended_files() -> List[str]:
 def snapshot_files() -> List[str]:
     """快照必须包含的文件（书根相对路径，snapshot_book / rollback_book 共用）。"""
     return load_contract().get("snapshotFiles", {}).get("paths", [])
+
+
+def resolve_snapshot_files(book_dir: str) -> List[str]:
+    """将快照清单展开为书根相对的实际文件路径。
+
+    非通配 pattern 原样返回（存在性由调用方检查并报告缺失）；
+    通配 pattern（story/roles/** 等）用 glob 递归展开为存在的文件清单。
+    快照写入（snapshot_book）与回滚读取（rollback_book）共用本函数，
+    保证两者路径集一致。
+    """
+    result: List[str] = []
+    for pat in snapshot_files():
+        if any(ch in pat for ch in "*?["):
+            base = os.path.join(book_dir, pat)
+            for m in sorted(glob.glob(base, recursive=True)):
+                if os.path.isfile(m):
+                    rel = os.path.relpath(m, book_dir).replace(os.sep, "/")
+                    if rel not in result:
+                        result.append(rel)
+        else:
+            if pat not in result:
+                result.append(pat)
+    return result
 
 
 def excluded_patterns() -> List[str]:

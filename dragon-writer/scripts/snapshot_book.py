@@ -32,11 +32,12 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
             "error": f"快照 {snap_name} 已存在，使用 --force 覆盖（禁止静默覆盖）",
         }
 
-    # 收集文件（清单来自 _contract.snapshot_files()，书根相对路径，正确解析 chapters/index.json）
+    # 收集文件（清单来自 _contract.resolve_snapshot_files(book_dir)，
+    # 支持 story/roles/** glob；非通配路径缺失时计入 missing）
     included_files = []
     file_hashes = {}
     missing = []
-    for fpath in _contract.snapshot_files():
+    for fpath in _contract.resolve_snapshot_files(book_dir):
         src = os.path.join(book_dir, fpath)
         if os.path.isfile(src):
             included_files.append(fpath)

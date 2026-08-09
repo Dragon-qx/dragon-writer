@@ -61,14 +61,14 @@ def execute_rollback(book_dir: str, chapter: int, delete_chapters: bool = False,
     snap_name = plan["snapshot"]
     snap_dir = os.path.join(book_dir, "story", "snapshots", snap_name)
 
-    # 回滚前创建恢复点（清单来自 _contract.snapshot_files()，书根相对路径）
+    # 回滚前创建恢复点（清单来自 _contract.resolve_snapshot_files(book_dir)，书根相对路径）
     recovery_name = None
     recovery_dir = None
     if create_recovery:
         recovery_name = next_snapshot_dir(book_dir)
         recovery_dir = os.path.join(book_dir, "story", "snapshots", recovery_name)
         os.makedirs(recovery_dir, exist_ok=True)
-        for fpath in _contract.snapshot_files():
+        for fpath in _contract.resolve_snapshot_files(book_dir):
             src = os.path.join(book_dir, fpath)
             if os.path.isfile(src):
                 dst = safe_join(recovery_dir, fpath)

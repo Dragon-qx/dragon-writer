@@ -86,7 +86,7 @@
       "required": false,
       "layer": "foundation",
       "consumer": ["dashboard", "scripts"],
-      "description": "角色档案（一个角色一份文件）"
+      "description": "角色档案（一个角色一份文件）：稳定属性 + 物理/逻辑数据时间线（章节锚定追加式，见 templates.md）"
     },
     "chapters/{nnnn}_{title}.md": {
       "path": "chapters/{nnnn}_{title}.md",
@@ -158,14 +158,15 @@
   ],
 
   "snapshotFiles": {
-    "description": "每个快照目录必须包含的运行时文件（书根相对路径）。snapshot_book / rollback_book 共用本字段，避免路径解析漂移。",
+    "description": "每个快照目录必须包含的运行时文件（书根相对路径）。支持 glob 通配（story/roles/**）。snapshot_book / rollback_book 共用本字段，避免路径解析漂移。",
     "paths": [
       "story/current_state.md",
       "story/pending_hooks.md",
       "story/chapter_summaries.md",
       "story/current_focus.md",
       "story/audit-drift.md",
-      "chapters/index.json"
+      "chapters/index.json",
+      "story/roles/**"
     ]
   }
 }
