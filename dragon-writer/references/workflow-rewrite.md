@@ -28,5 +28,6 @@
 
 - 重写流程安全规则：`references/file-contract.md`
 - 快照契约：`references/file-contract.md`
+- 章首 / 章末技法（起草前必读）：`references/chapter-craft.md`
 - 双层质量门禁：`references/audit-dimensions.md`
 - rewrite manifest 模板：`references/templates.md`

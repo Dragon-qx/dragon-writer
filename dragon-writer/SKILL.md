@@ -1,7 +1,7 @@
 ---
 name: dragon-writer
 slug: d-writer
-version: 3.6.0
+version: 3.9.0
 displayName: Dragon Writer
 description: 用于需要持久故事状态与连续性审计的长篇虚构小说项目：创建新书、续写章节、导入旧稿、调整方向、改写章节、安全回滚，或在多会话间阅读 / 重建大纲与设定文件。不用于一次性短文生成或仅做普通文案润色的任务。
 ---
@@ -48,7 +48,8 @@ python scripts/auto_update.py check --force      # auto_check=false 时强制检
    - **模式 G · 合并审核**：写完一章或连续写完多章后，把选定章节合并统一审核 → 读 `references/workflow-combined-audit.md`。
 2. 动任何文件之前先读 `references/file-contract.md`（文件职责、兼容命名、权威顺序、Foundation / Runtime 边界）。
 3. 新书或基础文件缺失时读 `references/templates.md`（全部基础文件模板）。
-4. 双层质量门禁细节读 `references/audit-dimensions.md`（43 个候选深化审计维度、体裁裁剪、结果四态）。
+4. **续写或改写章节正文前**读 `references/chapter-craft.md`（章首三行入戏、章末断章技法、开头 / 收尾类型与近 3 章轮换）。
+5. 双层质量门禁细节读 `references/audit-dimensions.md`（43 个候选深化审计维度、体裁裁剪、结果四态）。
 
 ## 双层质量门禁
 
@@ -65,7 +66,7 @@ python scripts/auto_update.py check --force      # auto_check=false 时强制检
 - 主角的行为是否符合既定的动机与当前约束。
 - 没有角色知道他们不可能知道的事实（对照 `current_state.md` 的"章节感知事实表"）。
 - 资源、伤势、地点、时间、库存、关系状态与承诺是否与状态文件一致。
-- 结尾让局面发生了真正的变化，而非只是烘托气氛或重复前文。
+- 结尾让局面发生了真正的变化，而非只是烘托气氛或重复前文；且以断章技法收束（见 `references/chapter-craft.md`），不以总结 / 金句 / 宣布计划泄压。
 - 文风是否符合既定的语言、体裁、视角、基调与篇幅目标。
 - **★ 空间一致性**：场景方位 / 布局 / 人物相对位置是否与 `current_state.md` 的"空间锚点"兼容，移动路径必须经过中间空间，视角内不能看见隔墙背面。
 - **★ 道具与细节**：随身物件、衣物、外貌特征的**数量、存在、状态**是否在相邻段落间与跨章无痕 ±1 / 凭空消失？消耗品的使用与减量是否对应？

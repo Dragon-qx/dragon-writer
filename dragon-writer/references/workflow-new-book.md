@@ -23,7 +23,7 @@
    - 节奏原则
 7. **为每个重要角色写一份角色档案**：写稳定属性（功能、欲望、恐惧、秘密、言行指纹、长期弧线），并在「物理数据时间线」「逻辑数据时间线」写入**出场基线行**（出场章、当前身高/体重/三围、体型/外貌快照、各逻辑维度当前值）；逻辑维度列名与 `book_rules.md`「逻辑数据维度」声明一致。易漂移的"当前状态"归入 `current_state.md`。
 8. **写 `book_rules.md` / `pending_hooks.md` / `current_state.md`**，以及一张空的 `chapter_summaries.md`。
-9. **写 `style_guide.md`**：语言风格、高疲劳词清单、体裁爽点类型、视角约定。
+9. **写 `style_guide.md`**：语言风格、高疲劳词清单、体裁爽点类型、视角约定、章首承接与章末断章约定（速查见 templates.md，技法库见 `references/chapter-craft.md`）。
 10. **保存 `story/snapshots/0000/` 作为第 0 章快照**（含 `manifest.json`）。
 11. **注入仪表盘**：把 `assets/dashboard.html` 复制到书文件夹（仅此一次，之后不再重写）。
 12. 若用户要求立刻写正文，以模式 B 推进第一章。

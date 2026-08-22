@@ -32,4 +32,5 @@
 ## 相关文档
 
 - 43 维判定规则：`references/audit-dimensions.md`
+- 章首 / 章末技法（维 42/43 判定的类型库与禁手清单）：`references/chapter-craft.md`
 - 审计漂移账本：`references/file-contract.md`

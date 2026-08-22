@@ -19,7 +19,7 @@
    - `pending_hooks.md`（活跃钩子）
 4. **读可压缩上下文**：
    - 最近几章摘要
-   - 最近 1–3 章结尾
+   - 最近 1–3 章结尾（**用于场景续接判断与开头 / 收尾类型轮换**，不是用来在下一章复述的信息）
    - `audit-drift.md`
 5. **创建 `runtime/chapter-NNNN.intent.md`**（每章都创建）：
    - chapter goal
@@ -28,8 +28,12 @@
    - reader expectation
    - hooks to advance / resolve / keep buried
    - must keep / must avoid
-   - required end-of-chapter change
-6. **起草**：从选定的上下文起草，而不是把整个项目都堆进来。
+   - **章首 / 章末**：开头类型 + 收尾断章类型（对照 `references/chapter-craft.md` 类型库，均须与近 3 章轮换）
+   - required end-of-chapter change（章末"画面上出现什么"，不是"总结出什么"）
+6. **起草**：从选定的上下文起草，而不是把整个项目都堆进来。开写前读 `references/chapter-craft.md`：
+   - **章首三行入戏**：前三行落在正在发生的事上，禁止回顾式承接；回顾前情 ≤2 句且必须夹带新信息。
+   - **章末断章**：按断章技法库在能量上升沿切，禁止总结本章 / 金句升华 / 宣布计划 / 情绪命名；钩子推进等元数据只进 `chapter_summaries.md`，绝不写进正文。
+   - **类型轮换**：开头类型与收尾类型均不得与近 3 章相同。
 7. **双层质量门禁（子代理审查）**：
 
    审计**不得**由起草同一上下文自评——这会导致文风维度（维 10/20/21/22/23）自评失效、审-改循环收敛到局部最优。审计必须在独立子代理中以**新鲜读者视角**运行。
@@ -52,7 +56,7 @@
    - 道具状态：<仅本章可能出现的道具，从 current_state.md 道具账本裁剪>
    - 空间锚点：<仅本章场景，从 current_state.md 空间锚点裁剪>
    - 活跃钩子：<仅本章相关的 hook_id + 一句话，从 pending_hooks.md 裁剪>
-   - 近 3 章开头/收尾/过渡摘要：<从 chapter_summaries.md 与近 3 章正文提取，供维 42 比对>
+   - 近 3 章开头/收尾/过渡摘要：<从 chapter_summaries.md 与近 3 章正文提取，附 chapter-craft.md 类型标注，供维 42/43 比对>
    ```
 
    **关键原则**：连续性事实是**从 current_state.md 中裁剪的纯事实**，不含"作者想让读者感受到什么"、不含大纲、不含角色档案、不含完整 current_state。
@@ -116,4 +120,5 @@
 - 文件职责与权威顺序：`references/file-contract.md`
 - 章节落盘事务流程：`references/file-contract.md`
 - 章节 delta 模板：`references/templates.md`
+- 章首 / 章末技法（起草前必读）：`references/chapter-craft.md`
 - 双层质量门禁与子代理审查机制：`references/audit-dimensions.md`
