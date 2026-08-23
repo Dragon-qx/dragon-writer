@@ -30,6 +30,7 @@ SCHEMA_VERSION = "1.0.0"
 # 避免与 references/file-contract.json 漂移。
 import _contract  # noqa: E402
 from _contract import (  # noqa: E402
+    count_characters,
     count_words,
     file_exists_with_alias,
     read_file,
@@ -457,13 +458,17 @@ def check_word_count_consistency(book_dir: str, result: ValidationResult):
                 )
         elif recorded == 0:
             result.add_warning(f"wordCount 缺失（0）：{fname}，请运行 rebuild_index.py")
-        if target and actual:
-            dev_t = abs(actual - target) / target
-            if dev_t > 0.4:
-                result.add_warning(
-                    f"章节字数偏离目标：{fname} 实际 {actual}，目标 {target}"
-                    f"（偏差 {dev_t:.0%}）"
-                )
+        # 目标对比用"字符数"（与 chapterWordCount 同尺度），不用段数
+        if target and os.path.isfile(full):
+            with open(full, "r", encoding="utf-8") as f:
+                chars = count_characters(f.read())
+            if chars:
+                dev_t = abs(chars - target) / target
+                if dev_t > 0.4:
+                    result.add_warning(
+                        f"章节字数偏离目标：{fname} 实际约 {chars} 字，目标 {target}"
+                        f"（偏差 {dev_t:.0%}）"
+                    )
 
 
 def check_fact_evidence(book_dir: str, result: ValidationResult):
@@ -602,6 +607,106 @@ def check_number_anchor_selfconflict(book_dir: str, result: ValidationResult):
                 return  # 每卡只处理第一个锚点表
 
 
+def _parse_sections(text: str):
+    """将文本解析为 [(小节名, 行列表)]，小节名取最近一个 `##` 标题。"""
+    sections = []
+    cur_name = ""
+    cur_lines = []
+    for line in text.split("\n"):
+        if line.startswith("##"):
+            if cur_lines:
+                sections.append((cur_name, cur_lines))
+            cur_name = line.lstrip("#").strip()
+            cur_lines = []
+        else:
+            cur_lines.append(line)
+    if cur_lines:
+        sections.append((cur_name, cur_lines))
+    return sections
+
+
+def _norm_dim(s: str) -> str:
+    """维度名归一化（去标点/空白，如 体型/外貌快照 -> 体型外貌快照）。"""
+    return re.sub(r"[^一-鿿A-Za-z0-9]", "", s)
+
+
+def _section_dim_names(lines):
+    """从 book_rules 的维度声明小节提取维度名集合（表头含"维度名"）。"""
+    for table in _parse_md_tables("\n".join(lines)):
+        if not table or "维度名" not in table[0]:
+            continue
+        names = set()
+        for row in table[1:]:
+            if len(row) > 1 and row[1].strip():
+                names.add(_norm_dim(row[1]))
+        return names if names else None
+    return None
+
+
+def _timeline_columns(lines):
+    """从角色卡时间线小节提取数据列（排除固定列 章 / 变化事件）。"""
+    for table in _parse_md_tables("\n".join(lines)):
+        if not table:
+            continue
+        header = table[0]
+        if not any("章" in c for c in header):
+            continue
+        cols = set()
+        for c in header:
+            nc = _norm_dim(c)
+            if nc and nc not in ("章", "变化事件"):
+                cols.add(nc)
+        return cols
+    return None
+
+
+def check_dimension_columns(book_dir: str, result: ValidationResult):
+    """角色卡物理/逻辑数据时间线列必须与 book_rules 维度声明一致。
+
+    与「物理数据维度」「逻辑数据维度」声明对齐：不声明的列（如仙侠题材的三围）
+    不应出现在角色卡时间线里。book_rules 无对应声明时跳过（旧书兼容）。
+    """
+    rules = read_file(book_dir, "story/book_rules.md")
+    if not rules:
+        return
+    decls = {}
+    for name, lines in _parse_sections(rules):
+        if "物理数据维度" in name:
+            dims = _section_dim_names(lines)
+            if dims:
+                decls["物理"] = dims
+        elif "逻辑数据维度" in name:
+            dims = _section_dim_names(lines)
+            if dims:
+                decls["逻辑"] = dims
+    if not decls:
+        return
+    roles_dir = os.path.join(book_dir, "story", "roles")
+    if not os.path.isdir(roles_dir):
+        return
+    for root, _, files in os.walk(roles_dir):
+        for fname in files:
+            if not fname.endswith(".md"):
+                continue
+            with open(os.path.join(root, fname), "r", encoding="utf-8") as f:
+                text = f.read()
+            for kind, section in (("物理", "物理数据时间线"), ("逻辑", "逻辑数据时间线")):
+                if kind not in decls:
+                    continue
+                for name, lines in _parse_sections(text):
+                    if section in name:
+                        cols = _timeline_columns(lines)
+                        if cols is not None:
+                            extra = cols - decls[kind]
+                            if extra:
+                                result.add_warning(
+                                    f"角色卡 {fname}「{section}」存在未声明的列："
+                                    f"{sorted(extra)}，请与 book_rules「"
+                                    f"{'物理数据维度' if kind == '物理' else '逻辑数据维度'}」声明对齐"
+                                )
+                        break
+
+
 def check_gender_address(book_dir: str, result: ValidationResult):
     """T7：性别称谓 lint——女角色被男性称谓 / 男角色被女性称谓（仅 warning，宁漏不误报）。
 
@@ -613,6 +718,9 @@ def check_gender_address(book_dir: str, result: ValidationResult):
         for root, _, files in os.walk(roles_dir):
             for f in files:
                 if not f.endswith(".md"):
+                    continue
+                # 跳过模板文件（下划线前缀 / 文件名含"模板"），它们不是真实角色
+                if f.startswith("_") or "模板" in f:
                     continue
                 path = os.path.join(root, f)
                 try:
@@ -671,6 +779,7 @@ def validate(book_dir: str) -> ValidationResult:
     check_word_count_consistency(book_dir, result)
     check_gender_address(book_dir, result)
     check_number_anchor_selfconflict(book_dir, result)
+    check_dimension_columns(book_dir, result)
     check_snapshot_manifests(book_dir, result)
     return result
 

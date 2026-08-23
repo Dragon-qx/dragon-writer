@@ -52,6 +52,27 @@
   --accent: #4f46e5; --accent-soft: #edeefc; --success: #15803d;
   --track: #e6e8ee; --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.05);
 }
+
+/* ========== 主题色方案（与浅色/深色模式正交，通过 data-scheme 切换） ========== */
+/* 默认靛蓝即 :root 基础值，无需额外规则；其余方案覆盖 accent 两色 */
+:root[data-scheme="ocean"]  { --accent:#0369a1; --accent-soft:#e0f0fa; }
+:root[data-scheme="forest"] { --accent:#047857; --accent-soft:#e2f4ec; }
+:root[data-scheme="sunset"] { --accent:#c2410c; --accent-soft:#fbe9dd; }
+:root[data-scheme="rose"]   { --accent:#be123c; --accent-soft:#fbe4e9; }
+:root[data-scheme="violet"] { --accent:#7c3aed; --accent-soft:#efe9fd; }
+/* 深色模式下的方案色（手动深色 + 跟随系统深色） */
+:root.theme-dark[data-scheme="ocean"]  { --accent:#38bdf8; --accent-soft:#0f2a3d; }
+:root.theme-dark[data-scheme="forest"] { --accent:#34d399; --accent-soft:#14291f; }
+:root.theme-dark[data-scheme="sunset"] { --accent:#fb923c; --accent-soft:#33200f; }
+:root.theme-dark[data-scheme="rose"]   { --accent:#fb7185; --accent-soft:#331520; }
+:root.theme-dark[data-scheme="violet"] { --accent:#a78bfa; --accent-soft:#26184a; }
+@media(prefers-color-scheme:dark) {
+  :root.theme-auto[data-scheme="ocean"]  { --accent:#38bdf8; --accent-soft:#0f2a3d; }
+  :root.theme-auto[data-scheme="forest"] { --accent:#34d399; --accent-soft:#14291f; }
+  :root.theme-auto[data-scheme="sunset"] { --accent:#fb923c; --accent-soft:#33200f; }
+  :root.theme-auto[data-scheme="rose"]   { --accent:#fb7185; --accent-soft:#331520; }
+  :root.theme-auto[data-scheme="violet"] { --accent:#a78bfa; --accent-soft:#26184a; }
+}
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
 }
@@ -59,7 +80,15 @@
 /* ========== Reset ========== */
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;font-size:var(--font-size-base)}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;font-size:var(--font-size-base);transition:background-color var(--transition-normal),color var(--transition-normal)}
+
+/* ========== 自定义背景层 ========== */
+#bgLayer{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity var(--transition-normal)}
+#landing,#app{position:relative;z-index:1}
+#bgLayer.pat-dots{opacity:1;background-image:radial-gradient(var(--border) 1.2px,transparent 1.2px);background-size:22px 22px}
+#bgLayer.pat-grid{opacity:1;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:28px 28px}
+#bgLayer.pat-glow{opacity:1;background:radial-gradient(ellipse 60% 45% at 15% 0%,var(--accent-soft) 0%,transparent 70%),radial-gradient(ellipse 50% 42% at 96% 88%,var(--accent-soft) 0%,transparent 70%)}
+#bgLayer.pat-image{background-size:cover;background-position:center;background-repeat:no-repeat}
 
 /* ========== 按钮 ========== */
 button{font-family:inherit;cursor:pointer;background:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 14px;font-size:var(--font-size-base);font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:background var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}
@@ -101,10 +130,15 @@ label.filelabel{display:inline-block}
 #app{display:none;min-height:100vh}
 body.loaded #landing{display:none}
 body.loaded #app{display:grid;grid-template-rows:auto 1fr}
-.layout{display:grid;grid-template-columns:180px 1fr}
+.layout{display:grid;grid-template-columns:180px minmax(0,1fr)}
+/* 宽屏（≥1280px）：右侧增加标题目录列 */
+@media(min-width:1280px){.layout{grid-template-columns:180px minmax(0,1fr) 216px}}
 
 /* ========== Appbar ========== */
 .appbar{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--bg-elevated);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+@supports(backdrop-filter:blur(10px)) {
+  .appbar{background:color-mix(in srgb,var(--bg-elevated) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+}
 .appbar .bookmeta{display:flex;align-items:baseline;gap:10px;min-width:0}
 .appbar .booktitle{font-size:17px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .appbar .booksub{color:var(--text-muted);font-size:13px;white-space:nowrap}
@@ -120,7 +154,7 @@ body.loaded #app{display:grid;grid-template-rows:auto 1fr}
 .tabs .navlabel{font-size:11px;letter-spacing:.08em;color:var(--text-muted);padding:14px 12px 6px;text-transform:uppercase}
 
 /* ========== Content ========== */
-main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
+main.content{padding:28px 32px 60px;max-width:1100px;width:100%;min-width:0;margin:0 auto}
 .panel{display:none}
 .panel.active{display:block;animation:panelIn .28s ease}
 @keyframes panelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -141,7 +175,7 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .muted{color:var(--text-muted)}
 .section-title{display:flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.06em;color:var(--text-muted);margin:28px 0 12px}
 .section-title::before{content:'';width:3px;height:13px;border-radius:2px;background:var(--accent);flex-shrink:0}
-.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.col2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 
 /* ========== Overview 组件 ========== */
 @property --p{syntax:'<percentage>';inherits:false;initial-value:0%}
@@ -181,7 +215,7 @@ main.content{padding:28px 32px 60px;max-width:1100px;width:100%}
 .article blockquote{border-left:3px solid var(--accent);margin:12px 0;padding:8px 16px;background:var(--bg-subtle);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
 
 /* ========== Graph 关系图 ========== */
-.graph-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;height:420px;max-height:70vh}
+.graph-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;height:420px;max-height:70vh}
 .graph-canvas-wrap{background:var(--bg-elevated);background-image:radial-gradient(var(--border) 1px,transparent 1px);background-size:20px 20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;height:100%;min-height:0}
 .graph-canvas-wrap canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
 .graph-tools{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:2}
@@ -258,6 +292,42 @@ mark.current{background:var(--accent);color:#fff}
 /* ========== 角色列表 ========== */
 .char-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
 
+/* ========== 页面右侧标题目录（宽屏显示） ========== */
+.page-toc{display:none}
+@media(min-width:1280px) {
+  .page-toc{display:block;position:sticky;top:73px;align-self:start;max-height:calc(100vh - 93px);overflow-y:auto;padding:4px 18px 24px 2px}
+}
+.ptoc-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);padding:8px 12px 8px}
+.ptoc-item{display:block;width:100%;text-align:left;border:none;border-left:2px solid var(--border);border-radius:0;background:transparent;box-shadow:none;padding:5px 12px;font-size:13px;font-weight:400;color:var(--text-muted);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color var(--transition-fast),border-color var(--transition-fast)}
+.ptoc-item:hover{background:transparent;color:var(--text);border-left-color:var(--text-muted)}
+.ptoc-item:active{transform:none}
+.ptoc-item.active{color:var(--accent);border-left-color:var(--accent);font-weight:600}
+/* 目录锚点目标：为 sticky appbar 预留滚动偏移 */
+.panel h2,.panel .section-title,.panel .settingfile{scroll-margin-top:70px}
+
+/* ========== 外观设置面板 ========== */
+.ap-wrap{position:relative}
+.ap-panel{position:absolute;right:0;top:calc(100% + 10px);width:268px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 8px rgba(16,24,40,.06),0 12px 32px rgba(16,24,40,.12);padding:16px;z-index:30;display:flex;flex-direction:column;gap:14px}
+.ap-panel[hidden]{display:none}
+.ap-row{display:flex;flex-direction:column;gap:8px}
+.ap-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+.ap-seg{display:flex;gap:4px;background:var(--bg-subtle);border-radius:var(--radius-sm);padding:3px}
+.ap-seg button{flex:1;border:none;background:transparent;box-shadow:none;padding:5px 4px;font-size:12px;color:var(--text-muted);border-radius:6px}
+.ap-seg button:hover{background:transparent;color:var(--text)}
+.ap-seg button.active{background:var(--bg-elevated);color:var(--accent);font-weight:600;box-shadow:var(--shadow)}
+.ap-swatches{display:flex;gap:8px;flex-wrap:wrap}
+.ap-swatch{width:30px;height:30px;border-radius:50%;border:2px solid transparent;padding:0;background:linear-gradient(135deg,var(--sw) 0 55%,var(--sw-soft) 55% 100%);box-shadow:inset 0 0 0 2px var(--bg-elevated);transition:transform var(--transition-fast)}
+.ap-swatch:hover{transform:scale(1.12);background:linear-gradient(135deg,var(--sw) 0 55%,var(--sw-soft) 55% 100%)}
+.ap-swatch.active{border-color:var(--sw);box-shadow:inset 0 0 0 2px var(--bg-elevated),0 1px 4px rgba(16,24,40,.18)}
+.ap-image-tools{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--border);padding-top:12px}
+.ap-image-tools .btnrow{display:flex;gap:8px}
+.ap-image-tools button{flex:1;font-size:12px;padding:6px 8px}
+.ap-image-tools label{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-muted)}
+.ap-image-tools input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
+@media(max-width:768px) {
+  .ap-panel{position:fixed;left:12px;right:12px;top:60px;width:auto}
+}
+
 /* ========== 滚动条 ========== */
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -272,7 +342,7 @@ mark.current{background:var(--accent);color:#fff}
 /* ========== Responsive ========== */
 /* 平板 / 窄桌面（≤1024px） */
 @media(max-width:1024px) {
-  .graph-layout{grid-template-columns:1fr 240px}
+  .graph-layout{grid-template-columns:minmax(0,1fr) 240px}
   .reader{grid-template-columns:200px minmax(0,1fr)}
   .reader .article{padding:28px 28px}
 }
@@ -323,6 +393,9 @@ svg{max-width:100%;height:auto}
 </head>
 <body>
 
+<!-- 自定义背景层（图案 / 用户图片，由 Appearance 模块控制） -->
+<div id="bgLayer" aria-hidden="true"></div>
+
 <!-- ============ 落地页 ============ -->
 <div id="landing">
   <div class="logo" aria-hidden="true">🐉</div>
@@ -351,6 +424,48 @@ svg{max-width:100%;height:auto}
     <span class="badge" id="bookStatus"></span>
     <span class="spacer"></span>
     <button id="rePickBtn" title="切换书架">切换书架</button>
+    <div class="ap-wrap">
+      <button id="appearanceBtn" title="外观设置" aria-label="外观设置" aria-haspopup="true" aria-expanded="false">🎨</button>
+      <div class="ap-panel" id="appearancePanel" hidden role="dialog" aria-label="外观设置">
+        <div class="ap-row">
+          <span class="ap-label">模式</span>
+          <div class="ap-seg" id="apModeSeg">
+            <button type="button" data-mode="auto">自动</button>
+            <button type="button" data-mode="light">浅色</button>
+            <button type="button" data-mode="dark">深色</button>
+          </div>
+        </div>
+        <div class="ap-row">
+          <span class="ap-label">主题色</span>
+          <div class="ap-swatches" id="apSchemes">
+            <button type="button" class="ap-swatch" data-scheme="indigo" style="--sw:#4f46e5;--sw-soft:#edeefc" title="靛蓝" aria-label="靛蓝"></button>
+            <button type="button" class="ap-swatch" data-scheme="ocean" style="--sw:#0369a1;--sw-soft:#e0f0fa" title="海蓝" aria-label="海蓝"></button>
+            <button type="button" class="ap-swatch" data-scheme="forest" style="--sw:#047857;--sw-soft:#e2f4ec" title="墨绿" aria-label="墨绿"></button>
+            <button type="button" class="ap-swatch" data-scheme="sunset" style="--sw:#c2410c;--sw-soft:#fbe9dd" title="暖橙" aria-label="暖橙"></button>
+            <button type="button" class="ap-swatch" data-scheme="rose" style="--sw:#be123c;--sw-soft:#fbe4e9" title="嫣红" aria-label="嫣红"></button>
+            <button type="button" class="ap-swatch" data-scheme="violet" style="--sw:#7c3aed;--sw-soft:#efe9fd" title="紫罗兰" aria-label="紫罗兰"></button>
+          </div>
+        </div>
+        <div class="ap-row">
+          <span class="ap-label">背景</span>
+          <div class="ap-seg" id="apBgSeg">
+            <button type="button" data-bg="none">无</button>
+            <button type="button" data-bg="dots">点阵</button>
+            <button type="button" data-bg="grid">网格</button>
+            <button type="button" data-bg="glow">光晕</button>
+            <button type="button" data-bg="image">图片</button>
+          </div>
+        </div>
+        <div class="ap-image-tools" id="apImageTools" hidden>
+          <div class="btnrow">
+            <button type="button" id="apPickImage">选择图片…</button>
+            <button type="button" id="apClearImage">清除图片</button>
+          </div>
+          <label>不透明度 <input type="range" id="apOpacity" min="10" max="100" step="5" value="35"><span id="apOpacityVal">35%</span></label>
+        </div>
+      </div>
+      <input type="file" id="apImageInput" accept="image/*">
+    </div>
     <button id="themeBtn" title="切换主题" aria-label="当前主题：自动，点击切换">🌙</button>
   </header>
   <div class="layout">
@@ -391,11 +506,13 @@ svg{max-width:100%;height:auto}
         <p class="lede">在仪表盘内直接阅读任意章节。</p>
       </section>
     </main>
+    <!-- 右侧标题目录（宽屏显示，由 PageToc 模块动态填充） -->
+    <aside class="page-toc" id="pageToc" aria-label="本页目录"></aside>
   </div>
 </div>
 
 <script>
-/* [build] generated by python scripts/build_dashboard.py at 2026-08-09T11:17:30.713326+00:00 */
+/* [build] generated by python scripts/build_dashboard.py at 2026-08-23T09:45:42.159189+00:00 */
 "use strict";
 /* ============================================================================
    Dragon Writer 仪表盘 —— 运行时。
@@ -488,9 +605,18 @@ const Utils = (() => {
       return current;
     };
 
+    // 直接设置模式（供外观面板的分段控件使用）
+    const set = (mode) => {
+      if (!['auto', 'light', 'dark'].includes(mode)) return current;
+      current = mode;
+      apply();
+      try { localStorage.setItem(KEY, current); } catch {}
+      return current;
+    };
+
     const get = (name) => cssVarCache[name] || readCSSVar(name);
 
-    return { init, toggle, apply, get, refresh: refreshCache, get current() { return current; } };
+    return { init, toggle, set, apply, get, refresh: refreshCache, get current() { return current; } };
   })();
 
   // 键盘快捷键 —— 统一路由器，支持按当前 tab 分发，避免组件间互相覆盖
@@ -1058,6 +1184,7 @@ const Router = (() => {
         comp.onEnter();
       }
       location.hash = tab;
+      PageToc.refresh();
       return;
     }
 
@@ -1086,6 +1213,7 @@ const Router = (() => {
 
     current = tab;
     location.hash = tab;
+    PageToc.refresh();
   };
 
   const init = () => {
@@ -1137,6 +1265,269 @@ const Router = (() => {
   };
 
   return { register, switchTab, init, get current() { return current; }, _componentMap: componentMap };
+})();
+
+/* ---------- PageToc 右侧标题目录模块 ----------
+   从当前激活面板收集标题（h2 / .section-title / 设定文件卡片），
+   生成右侧目录；滚动时高亮当前小节，点击平滑滚动定位。 */
+const PageToc = (() => {
+  let items = [];    // [{ el, text }]
+  let linkEls = [];  // 目录按钮
+  let seq = 0;
+  let ticking = false;
+  let bound = false;
+
+  const container = () => document.getElementById('pageToc');
+
+  const ensureId = (el) => {
+    if (!el.id) el.id = 'ptoc-' + (++seq);
+    return el.id;
+  };
+
+  // 收集当前面板的锚点：面板标题 + 小节标题 + 设定文件卡片
+  const collect = () => {
+    const panel = document.querySelector('.panel.active');
+    if (!panel) return [];
+    const out = [];
+    const h2 = panel.querySelector('h2');
+    if (h2) out.push({ el: h2, text: h2.textContent.trim() });
+    panel.querySelectorAll('.section-title').forEach(el => {
+      const t = el.textContent.trim();
+      if (t) out.push({ el, text: t });
+    });
+    panel.querySelectorAll('.settingfile .name').forEach(el => {
+      const card = el.closest('.settingfile');
+      const t = el.textContent.trim();
+      if (card && t) out.push({ el: card, text: t });
+    });
+    return out;
+  };
+
+  const render = () => {
+    const c = container();
+    if (!c) return;
+    items = collect();
+    // 少于 2 个锚点（如阅读面板）不显示目录
+    if (items.length < 2) { c.innerHTML = ''; linkEls = []; return; }
+    c.innerHTML = '<div class="ptoc-title">本页目录</div>' + items.map((it, i) =>
+      `<button type="button" class="ptoc-item" data-i="${i}">${Utils.escHtml(it.text)}</button>`).join('');
+    linkEls = [...c.querySelectorAll('.ptoc-item')];
+  };
+
+  // 滚动跟随：最后一个越过视口顶部的锚点视为当前小节
+  const spy = () => {
+    if (!items.length || !linkEls.length) return;
+    const OFFSET = 90; // appbar 高度 + 余量
+    let activeIdx = 0;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].el.getBoundingClientRect().top <= OFFSET) activeIdx = i;
+      else break;
+    }
+    // 滚到页面底部时激活最后一项
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+      activeIdx = items.length - 1;
+    }
+    linkEls.forEach((b, i) => b.classList.toggle('active', i === activeIdx));
+  };
+
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { ticking = false; spy(); });
+  };
+
+  const bind = () => {
+    if (bound) return;
+    bound = true;
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    container().addEventListener('click', (e) => {
+      const b = e.target.closest('.ptoc-item');
+      if (!b) return;
+      const it = items[parseInt(b.dataset.i, 10)];
+      if (!it) return;
+      // 目标处于折叠的设定文件卡片时，先展开再定位
+      if (it.el.classList && it.el.classList.contains('settingfile') && !it.el.classList.contains('open')) {
+        it.el.classList.add('open');
+        const row = it.el.querySelector('.row');
+        if (row) row.setAttribute('aria-expanded', 'true');
+      }
+      it.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      linkEls.forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  };
+
+  // 面板切换或重渲染后调用：重建目录并刷新高亮
+  const refresh = () => {
+    bind();
+    render();
+    spy();
+  };
+
+  return { refresh };
+})();
+
+/* ---------- Appearance 外观模块 ----------
+   管理主题色方案（data-scheme）与自定义背景层（#bgLayer），
+   偏好持久化到 localStorage；自定义图片压缩后以 dataURL 存储。 */
+const Appearance = (() => {
+  const K = { scheme: 'dw-scheme', bg: 'dw-bg', img: 'dw-bg-image', opacity: 'dw-bg-opacity' };
+  const SCHEMES = ['indigo', 'ocean', 'forest', 'sunset', 'rose', 'violet'];
+  const BGS = ['none', 'dots', 'grid', 'glow', 'image'];
+  let scheme = 'indigo', bg = 'none', opacity = 35;
+
+  const $id = id => document.getElementById(id);
+
+  const save = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+  // 应用背景层状态
+  const applyBg = () => {
+    const layer = $id('bgLayer');
+    if (!layer) return;
+    layer.className = '';
+    layer.style.backgroundImage = '';
+    if (bg === 'none') { layer.style.opacity = '0'; return; }
+    if (bg === 'image') {
+      const url = (() => { try { return localStorage.getItem(K.img); } catch { return null; } })();
+      if (!url) { layer.style.opacity = '0'; return; } // 选了图片但没上传过：保持无背景
+      layer.classList.add('pat-image');
+      layer.style.backgroundImage = 'url("' + url + '")';
+      layer.style.opacity = String(opacity / 100);
+      return;
+    }
+    layer.classList.add('pat-' + bg);
+    layer.style.opacity = '1';
+  };
+
+  // 应用主题色
+  const applyScheme = () => {
+    const root = document.documentElement;
+    if (scheme === 'indigo') root.removeAttribute('data-scheme');
+    else root.setAttribute('data-scheme', scheme);
+    Utils.theme.refresh();   // accent 等变量缓存随方案更新
+    GraphEngine.redraw();    // 关系图按新配色重绘
+  };
+
+  // 同步面板中控件的选中态
+  const syncUI = () => {
+    document.querySelectorAll('#apModeSeg button').forEach(b =>
+      b.classList.toggle('active', b.dataset.mode === Utils.theme.current));
+    document.querySelectorAll('#apSchemes .ap-swatch').forEach(b =>
+      b.classList.toggle('active', b.dataset.scheme === scheme));
+    document.querySelectorAll('#apBgSeg button').forEach(b =>
+      b.classList.toggle('active', b.dataset.bg === bg));
+    $id('apImageTools').hidden = bg !== 'image';
+    const hasImg = (() => { try { return !!localStorage.getItem(K.img); } catch { return false; } })();
+    $id('apClearImage').disabled = !hasImg;
+    $id('apOpacity').value = opacity;
+    $id('apOpacityVal').textContent = opacity + '%';
+  };
+
+  const setScheme = (s) => {
+    if (!SCHEMES.includes(s)) return;
+    scheme = s; save(K.scheme, s);
+    applyScheme(); syncUI();
+  };
+
+  const setBg = (b) => {
+    if (!BGS.includes(b)) return;
+    bg = b; save(K.bg, b);
+    applyBg(); syncUI();
+  };
+
+  const setOpacity = (v) => {
+    opacity = Math.min(100, Math.max(10, parseInt(v, 10) || 35));
+    save(K.opacity, String(opacity));
+    applyBg(); syncUI();
+  };
+
+  // 图片压缩：最长边 1600，JPEG 0.82，控制 localStorage 占用
+  const handleImageFile = (file) => {
+    if (!file || !/^image\//.test(file.type)) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1600;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(img.width * scale));
+        cv.height = Math.max(1, Math.round(img.height * scale));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        const url = cv.toDataURL('image/jpeg', 0.82);
+        try {
+          localStorage.setItem(K.img, url);
+        } catch (e) {
+          alert('图片体积过大，无法保存。请换一张分辨率更小的图片。');
+          return;
+        }
+        applyBg(); syncUI();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const init = () => {
+    // 恢复偏好
+    try {
+      scheme = SCHEMES.includes(localStorage.getItem(K.scheme)) ? localStorage.getItem(K.scheme) : 'indigo';
+      bg = BGS.includes(localStorage.getItem(K.bg)) ? localStorage.getItem(K.bg) : 'none';
+      opacity = parseInt(localStorage.getItem(K.opacity), 10) || 35;
+    } catch {}
+
+    applyScheme();
+    applyBg();
+
+    const btn = $id('appearanceBtn'), panel = $id('appearancePanel');
+    const closePanel = () => { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    const openPanel = () => { syncUI(); panel.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      panel.hidden ? openPanel() : closePanel();
+    });
+    panel.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', closePanel);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) closePanel(); });
+
+    $id('apModeSeg').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-mode]');
+      if (!b) return;
+      Utils.theme.set(b.dataset.mode);
+      // 同步顶栏 🌙 按钮的图标与 aria-label（与 initApp 中逻辑一致）
+      const themeBtn = $id('themeBtn');
+      const m = Utils.theme.current;
+      const label = m === 'dark' ? '深色' : m === 'light' ? '浅色' : '自动';
+      themeBtn.textContent = m === 'dark' ? '☀' : m === 'light' ? '🌙' : '🌓';
+      themeBtn.setAttribute('aria-label', `当前主题：${label}，点击切换`);
+      GraphEngine.redraw();
+      syncUI();
+    });
+    $id('apSchemes').addEventListener('click', (e) => {
+      const b = e.target.closest('.ap-swatch');
+      if (b) setScheme(b.dataset.scheme);
+    });
+    $id('apBgSeg').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-bg]');
+      if (b) setBg(b.dataset.bg);
+    });
+    $id('apPickImage').addEventListener('click', () => $id('apImageInput').click());
+    $id('apImageInput').addEventListener('change', (e) => {
+      if (e.target.files.length) handleImageFile(e.target.files[0]);
+      e.target.value = ''; // 允许重复选择同一文件
+    });
+    $id('apClearImage').addEventListener('click', () => {
+      try { localStorage.removeItem(K.img); } catch {}
+      applyBg(); syncUI();
+    });
+    $id('apOpacity').addEventListener('input', (e) => setOpacity(e.target.value));
+
+    syncUI();
+  };
+
+  return { init, syncMode: syncUI };
 })();
 
 /* ---------- 通用工具 ---------- */
@@ -2992,7 +3383,9 @@ const initApp = () => {
     const mode = Utils.theme.toggle();
     updateThemeBtn(mode);
     GraphEngine.redraw(); // 主题切换后重绘关系图
+    Appearance.syncMode(); // 同步外观面板中的模式选中态
   });
+  Appearance.init();
 
   document.getElementById('pickBtn').addEventListener('click', pickFolder);
   document.getElementById('compatBtn').addEventListener('click', () => document.getElementById('fileInput').click());

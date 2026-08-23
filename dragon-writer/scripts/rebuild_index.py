@@ -25,6 +25,9 @@ def parse_chapter_file(name: str) -> Optional[Tuple[int, str]]:
         return None
     num = int(m.group(1))
     title = m.group(2).replace("_", " ").replace("-", " ").strip()
+    # 去除标题末尾的 .md 扩展名（如 "0001_入门.md" -> "入门"）
+    if title.endswith(".md"):
+        title = title[:-3].strip()
     # 去除第X章前缀
     title = re.sub(r"^第?\d+[章回节卷]\s*", "", title).strip()
     return num, title or name.replace(".md", "")

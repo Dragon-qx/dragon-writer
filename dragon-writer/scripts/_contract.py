@@ -157,9 +157,18 @@ def file_sha256(path: str) -> str:
 
 
 def count_words(text: str) -> int:
-    """中英文章节字数统计（与 rebuild_index 共用，避免两处算法漂移）。
+    """章节 index 的 wordCount 统计（与 rebuild_index 共用，避免两处算法漂移）。
 
-    统计规则：连续的中文字符 / 英文字母数字串各计为一个"字"，
-    与 `rebuild_index.py` 的 wordCount 完全一致。
+    统计规则：连续的中文字符 / 英文字母数字串各计为一个"段"（非标点连续段）。
+    用于 index 的 wordCount 与 index-正文一致性核对（两者同尺度）。
     """
     return len(re.findall(r"[一-鿿A-Za-z0-9]+", text))
+
+
+def count_characters(text: str) -> int:
+    """章节"字数"统计（去空白字符数）——与 book.json 的 chapterWordCount 目标同尺度。
+
+    chapterWordCount 是作者按"字符"设定的单章目标，而 count_words 统计的是
+    非标点连续段数（尺度不同），两者不可直接比较。对目标偏差用本函数。
+    """
+    return len(re.sub(r"\s", "", text))

@@ -207,6 +207,17 @@ class TestGenderAddress:
         result = validate(book)
         assert not messages(result, "warnings", "被男性称谓")
 
+    def test_template_file_is_skipped(self, tmp_path):
+        """骨架角色卡模板（_前缀/含'模板'）不参与性别称谓 lint。"""
+        book = copy_std(tmp_path)
+        role_dir = os.path.join(book, "story", "roles", "major")
+        with open(os.path.join(role_dir, "_角色卡模板.md"), "w", encoding="utf-8") as f:
+            f.write("# <角色名>\n\n## 基本信息\n- 性别：女\n")
+        with open(os.path.join(book, "chapters", "0001_入门.md"), "w", encoding="utf-8") as f:
+            f.write("# 入门\n\n角色卡模板你一个男的。\n")
+        result = validate(book)
+        assert not messages(result, "warnings", "被男性称谓")
+
 
 class TestNumberAnchorSelfConflict:
     """T6.4：角色卡 canon 数字锚点表内自相矛盾 → warning。"""
@@ -265,6 +276,102 @@ class TestBookJsonStale:
         result = validate(book)
         warns = messages(result, "warnings", "book.json.status 仍为 outlining")
         assert warns, f"应报 status 陈旧警告，但无：{result.warnings}"
+
+
+class TestSkeletonClean:
+    """书骨架（assets/book-skeleton）本身必须 validate 全绿（0 error + 0 warning）。"""
+
+    def test_skeleton_validation_clean(self):
+        skeleton = os.path.join(
+            os.path.dirname(__file__), "..", "assets", "book-skeleton"
+        )
+        if not os.path.isdir(skeleton):
+            pytest.skip("骨架目录不存在")
+        result = validate(skeleton)
+        assert result.ok, f"骨架不应有 error：{result.errors}"
+        assert not result.warnings, f"骨架不应有 warning：{result.warnings}"
+
+
+class TestDimensionColumns:
+    """角色卡时间线列必须与 book_rules 维度声明一致（未声明列 -> warning）。"""
+
+    def _write_rules(self, book, content):
+        with open(os.path.join(book, "story", "book_rules.md"), "w", encoding="utf-8") as f:
+            f.write(content)
+
+    def _write_card(self, book, name, content):
+        # 清掉 fixture 的角色卡，避免其未声明列干扰本用例
+        for root, _, files in os.walk(os.path.join(book, "story", "roles")):
+            for f in files:
+                if f.endswith(".md"):
+                    os.remove(os.path.join(root, f))
+        role_dir = os.path.join(book, "story", "roles", "major")
+        with open(os.path.join(role_dir, name), "w", encoding="utf-8") as f:
+            f.write(content)
+
+    def test_undeclared_physical_column_warns(self, tmp_path):
+        book = copy_std(tmp_path)
+        self._write_rules(book, (
+            "# Book Rules\n\n"
+            "## 物理数据维度 Physical Data Dimensions\n\n"
+            "| dim_id | 维度名 | 单位/取值口径 | 说明 |\n"
+            "| --- | --- | --- | --- |\n"
+            "| phy-001 | 身高 | 尺/寸 | 身高 |\n"
+            "| phy-002 | 体重 | 斤 | 体重 |\n"
+        ))
+        self._write_card(book, "测试.md", (
+            "# 测试\n\n"
+            "## 物理数据时间线 Physical Data Timeline\n\n"
+            "| 章 | 身高 | 体重 | 三围（胸/腰/臀） | 变化事件 |\n"
+            "| ---: | ---: | ---: | --- | --- |\n"
+            "| 1 | 5尺 | 100斤 | 32/24/34 | 出场基线 |\n"
+        ))
+        result = validate(book)
+        warns = messages(result, "warnings", "未声明的列")
+        assert warns, f"应报未声明列警告，但无：{result.warnings}"
+
+    def test_declared_columns_are_fine(self, tmp_path):
+        book = copy_std(tmp_path)
+        self._write_rules(book, (
+            "# Book Rules\n\n"
+            "## 物理数据维度 Physical Data Dimensions\n\n"
+            "| dim_id | 维度名 | 单位/取值口径 | 说明 |\n"
+            "| --- | --- | --- | --- |\n"
+            "| phy-001 | 身高 | 尺/寸 | 身高 |\n"
+        ))
+        self._write_card(book, "测试.md", (
+            "# 测试\n\n"
+            "## 物理数据时间线 Physical Data Timeline\n\n"
+            "| 章 | 身高 | 变化事件 |\n"
+            "| ---: | ---: | --- |\n"
+            "| 1 | 5尺 | 出场基线 |\n"
+        ))
+        result = validate(book)
+        assert not messages(result, "warnings", "未声明的列")
+
+
+class TestRebuildIndex:
+    """rebuild_index 的章节标题解析。"""
+
+    def test_parse_title_strips_extension(self):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        import rebuild_index
+        num, title = rebuild_index.parse_chapter_file("0001_入门.md")
+        assert num == 1
+        assert title == "入门"
+        assert not title.endswith(".md")
+
+
+class TestCountCharacters:
+    """_contract.count_characters 与 count_words 语义区分。"""
+
+    def test_count_characters_counts_non_whitespace(self):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        from _contract import count_characters, count_words
+        text = "青云山下，陆恒入门。\n\n这是第一天。"
+        # 字符数（去空白）> 段数（非标点连续段）
+        assert count_characters(text) > count_words(text)
+        assert count_characters("甲字七号舍") == 5
 
 
 if __name__ == "__main__":

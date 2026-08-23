@@ -99,8 +99,12 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
     write_json(os.path.join(book_dir, "book.json"), book_json)
 
     # 复制书籍骨架（如果存在）
+    # 注意：跳过 book.json——本函数已在上面写入正确的 book.json
+    # （含真实 id / slug / 版本 / 时间戳），不能被骨架占位版覆盖。
     if os.path.isdir(BOOK_SKELETON_DIR):
         for name in os.listdir(BOOK_SKELETON_DIR):
+            if name == "book.json":
+                continue
             src = os.path.join(BOOK_SKELETON_DIR, name)
             dst = os.path.join(book_dir, name)
             if os.path.isdir(src):
