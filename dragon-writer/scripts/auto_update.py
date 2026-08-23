@@ -36,6 +36,10 @@ from typing import Any, Dict, Optional, Tuple
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 META_PATH = SKILL_ROOT / "_meta.json"
 
+# 直接下载地址模板：skillhub 官方下载端点（匿名可访问，返回含全部技能文件的 zip）。
+# 注意：不是旧版硬编码的 COS 桶地址（已 404）。
+DIRECT_DOWNLOAD_URL_TEMPLATE = "https://api.skillhub.cn/api/v1/download?slug={slug}"
+
 
 def load_meta() -> Dict[str, Any]:
     """加载本地 _meta.json。"""
@@ -143,9 +147,11 @@ def _try_skillhub_cli_upgrade(slug: str, install_dir: Path, remote_version: str)
         return False
 
     try:
-        # 先尝试 skillhub upgrade 命令
+        # 先尝试 skillhub upgrade 命令。
+        # 注意：CLI 的 upgrade 子命令不接受 --force（只支持 --check-only/--timeout/--dir），
+        # 传 --force 会报 "unrecognized arguments" 导致每次都失败。
         result = subprocess.run(
-            [skillhub_bin, "upgrade", slug, "--dir", str(install_dir), "--force"],
+            [skillhub_bin, "upgrade", slug, "--dir", str(install_dir)],
             capture_output=True,
             text=True,
             timeout=60,
@@ -169,11 +175,15 @@ def _try_skillhub_cli_upgrade(slug: str, install_dir: Path, remote_version: str)
 
 
 def _try_direct_download(slug: str, install_dir: Path, remote_version: str) -> bool:
-    """直接下载 skill zip 并解压到安装目录。"""
-    download_template = (
-        "https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/skills/{slug}.zip"
+    """直接下载 skill zip 并解压到安装目录。
+
+    下载地址用 skillhub 官方端点（DIRECT_DOWNLOAD_URL_TEMPLATE）：
+    旧版硬编码的 COS 桶地址（...myqcloud.com/skills/{slug}.zip）已返回 404，
+    导致无 skillhub CLI 的环境下更新必然失败。
+    """
+    download_url = DIRECT_DOWNLOAD_URL_TEMPLATE.replace(
+        "{slug}", urllib.parse.quote(slug)
     )
-    download_url = download_template.replace("{slug}", urllib.parse.quote(slug))
 
     try:
         with tempfile.TemporaryDirectory(prefix="d-writer-update-") as tmp:
@@ -228,6 +238,27 @@ def _merge_update(source: Path, target: Path) -> None:
             else:
                 dest.unlink()
         shutil.move(str(item), str(dest))
+
+
+def _git_uncommitted(install_dir: Path) -> bool:
+    """检测 install_dir 是否位于 git 工作树且有未提交改动。
+
+    用于就地覆盖保护：自动更新会覆盖目录内全部文件（仅保留 _meta.json），
+    若该目录是 git 工作树且存在未提交改动，应跳过覆盖以免抹掉源码工作。
+    非 git 目录 / 命令不可用一律返回 False（不阻断）。
+    """
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(install_dir), "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if r.returncode != 0:
+        return False  # 不在 git 仓库
+    return bool(r.stdout.strip())
 
 
 def update_local_version(meta: Dict[str, Any], new_version: str) -> None:
@@ -293,20 +324,30 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     print(f"[update] 发现新版本: {local_version or '(无)'} -> {remote_version}")
 
+    # git 工作树保护：就地覆盖会抹掉未提交的源码工作，除非 --force
+    if not getattr(args, "force", False) and _git_uncommitted(SKILL_ROOT):
+        print(
+            "[update] 安装目录是 git 工作树且有未提交改动，已跳过就地覆盖"
+            "（防止抹掉源码工作）。"
+        )
+        print("[update] 如需强制更新，请先提交或使用 --force。")
+        return 0
+
     # 执行更新
     try:
         success = perform_update(meta, remote_version)
     except Exception as exc:
-        if args.verbose:
-            print(f"[update] 更新失败（已跳过）: {exc}")
+        print(f"[update] 更新失败（已跳过）: {exc}")
         return 0 if skip_on_error else 1
 
     if success:
         update_local_version(meta, remote_version)
         print(f"[update] 已更新到版本 {remote_version}")
     else:
-        if args.verbose:
-            print("[update] 更新失败（已跳过）")
+        print(
+            f"[update] 更新失败：CLI 与直接下载均未成功"
+            f"（本地仍为 {local_version}，远程 {remote_version}）"
+        )
         return 0 if skip_on_error else 1
 
     return 0

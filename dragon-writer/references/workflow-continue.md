@@ -53,13 +53,14 @@
    - 主角：<名字、身份、当前状态>
    - 当前地点/时间：<...>
    - 已知事实：<仅与本章情节直接相关的，从 current_state.md 事实表裁剪>
-   - 道具状态：<仅本章可能出现的道具，从 current_state.md 道具账本裁剪>
+   - 道具状态：<仅本章可能出现的道具，从 current_state.md 道具账本裁剪，含 origin 与最近两章变化事件>
    - 空间锚点：<仅本章场景，从 current_state.md 空间锚点裁剪>
+   - canon 数字锚点：<本章出场角色的「canon 数字锚点」表裁剪（仅 anchor_id + 事项 + 值），从角色卡「canon 数字锚点 Number Anchors」区块提取>
    - 活跃钩子：<仅本章相关的 hook_id + 一句话，从 pending_hooks.md 裁剪>
    - 近 3 章开头/收尾/过渡摘要：<从 chapter_summaries.md 与近 3 章正文提取，附 chapter-craft.md 类型标注，供维 42/43 比对>
    ```
 
-   **关键原则**：连续性事实是**从 current_state.md 中裁剪的纯事实**，不含"作者想让读者感受到什么"、不含大纲、不含角色档案、不含完整 current_state。
+   **关键原则**：连续性事实是**从 current_state.md 中裁剪的纯事实**，不含"作者想让读者感受到什么"、不含大纲、不含角色档案、不含完整 current_state。canon 数字锚点与此不冲突：**排除的是角色档案中的写作指引（欲望 / 弧线 / 技法），数字锚点是可判定事实，必须给到审计子代理**——否则"卡说 21 岁、正文写 20 岁"这类冲突永远无法被冷读发现。
 
    ### 7.2 启动子代理审计
 
@@ -80,7 +81,7 @@
    ```markdown
    # 审计报告
 
-   ## 第一层：驻场初筛（9点）
+   ## 第一层：驻场初筛（10 点）
    - [PASS/FAIL] 维度名：证据 "..." → 建议 "..."
 
    ## 第二层：深化审计（激活维度）
@@ -109,8 +110,12 @@
    未当场修复的审计发现，必须落记录（`audit-drift.md`）。
 
 8. **事务式落盘**（详见 `references/file-contract.md` 的"章节落盘事务流程"）：
-   - 按序写入：`chapters/NNNN_<title>.md` → `chapters/index.json` → `chapter_summaries.md` 行（含**章节 delta**）→ `current_state.md`（事实表 + 关系 + 道具账本 + 空间锚点）→ `pending_hooks.md`
-   - 全部写入后运行一致性验证
+   - 按序写入：`chapters/NNNN_<title>.md` → `chapters/index.json` → `chapter_summaries.md` 行（含**章节 delta**）→ `current_state.md`（事实表 + 关系 + 道具账本 + 空间锚点）→ `pending_hooks.md` → `book.json`（status / updatedAt 同步）→ intent 的「实际偏离 Deviation Log」（若产出偏离 intent 的 goal / 必须场景 / 章末画面）
+   - **字数禁手写**：`chapters/index.json` 的 wordCount 必须由 `python scripts/rebuild_index.py <book-dir>` 生成，禁止手写数值
+   - 道具账本**三核对**：数量、状态、存放位置——三项逐一对着本章正文末态核对，不允许只改数量
+   - **新增固定物件 / 布局变化 → 空间锚点登记**（新列或新锚点行，遵循 valid_until 失效规则）
+   - **hook 收敛复查**：对本章 summary 的 events 逐项自问 advance / resolve / defer；notes 出现"揭露 / 兑现 / 真相"字样的 hook 必须重新评估 lifecycle_status（揭尽 → resolved 或收窄为新子 hook）；正文推进了某 hook 内容的，`last_advanced_chapter` / `chapters_since_advance` 同步
+   - 全部写入后运行一致性验证：`python scripts/validate_book.py <book-dir>`（FAIL 则修复后再落盘）
    - 完成后创建章末快照 `snapshots/<NNNN>/`（含 `manifest.json`）
    - **不要重写仪表盘**——它运行时自会读取最新文件
 9. **合并审核询问（仅在任务终点一次）**：若是本轮写作任务的**最后一章**（单章，或连续创作的终点），主代理询问用户"是否进入合并审核？"——**连续创作时中途各章完成不打断、不询问**。进入后范围由用户决定（全部 / 部分 / 指定区间），执行见 `references/workflow-combined-audit.md`。

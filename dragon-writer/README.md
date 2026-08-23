@@ -201,8 +201,29 @@ python scripts/auto_update.py status --verbose
 - 本地版本存储在 `_meta.json` 的 `version` 字段
 - 远程版本从 `https://api.skillhub.cn/api/v1/search?q=d-writer` 获取（slug=`d-writer`）
 - 语义化版本对比（`x.y.z`）：本地 < 远程时执行更新
-- 更新方式：优先 `skillhub` CLI，回退到直接下载 zip
+- 更新方式：优先 `skillhub` CLI，回退到直接下载 zip（官方端点 `https://api.skillhub.cn/api/v1/download?slug={slug}`）
 - 任何错误均跳过，不中断 skill 运行
+- **git 工作树保护**：安装目录是 git 工作树且有未提交改动时跳过覆盖（防抹掉源码工作），可用 `--force` 覆盖
+
+### 发布新版（维护者）
+
+改完代码后按以下步骤发版，否则已安装副本的自动更新永远拉不到新版本：
+
+```bash
+# 1) 升版本号：SKILL.md frontmatter 与 _meta.json 的 version 同步递增
+# 2) 本地测试：python -m pytest tests/ -q
+# 3) 从干净暂存副本发布（必须排除注册表禁止的文件类型）：
+#    cp -r dragon-writer /tmp/publish-staging/d-writer
+#    rm -f 暂存目录/.editorconfig 暂存目录/.gitattributes
+#    rm -rf 暂存目录/.pytest_cache 暂存目录/__pycache__
+#    rm -f 暂存目录/references/tab-*.png   # 注册表禁止 .png / .editorconfig / .gitattributes
+#    skillhub publish /tmp/publish-staging/d-writer --version x.y.z --changelog "..."
+# 4) 验证：skillhub verify d-writer@x.y.z 或检查 https://api.skillhub.cn/api/v1/skills/d-writer
+#    确认 latestVersion 已指向新版本；若未更新，到 skillhub 控制台确认/激活该版本
+# 5) git tag x.y.z 并推送
+```
+
+> 注册表文件类型白名单：发布时会拒绝 `.png`、`.editorconfig`、`.gitattributes` 等类型——这些只保留在源码仓库（仪表盘截图等），不进发布包。`publish` 目前不支持 `--namespace`/`--skillId` 链接既有技能，若发布后 `latestVersion` 未指向新版本，需到 skillhub 控制台处理。
 
 ### 运行测试
 

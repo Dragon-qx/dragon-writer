@@ -33,7 +33,7 @@ books/<book-id>/
     pending_hooks.md
     chapter_summaries.md
     style_guide.md
-    audit_drift.md
+    audit-drift.md
     outline/
       story_frame.md
       volume_map.md
@@ -98,6 +98,13 @@ books/<book-id>/
 `roles/**/*.md`
 : 一个角色一份文件。保存**稳定属性**（角色功能、欲望、恐惧、秘密、言行指纹、长期弧线）+ **数据时间线**（「物理数据时间线」「逻辑数据时间线」，章节锚定的追加式 Runtime 区块，见 `templates.md`）。易漂移的"当前关系 / 伤势 / 位置"仍不写入档案，统一归入 `current_state.md`（详见 [Foundation 与 Runtime 边界](#foundation-与-runtime-边界)）。
 
+### 角色晋升规则（minor -> major）
+
+- 晋升 = **移动**文件（`roles/minor/<name>.md` -> `roles/major/<name>.md`），**不是复制**。晋升后活跃目录中同一角色只允许存在一份卡。
+- 晋升时在卡内「角色功能」区块末尾追加一行晋升记录：`> 晋升：第 N 章由次要角色升为主要角色（<晋升事件一句话>）`。
+- 旧 minor 卡不留副本。历史依赖章末快照（`snapshots/<NNNN>/story/roles/**` 已捕获当时的目录结构），不在活跃目录留第二份。
+- **禁止同名双卡**：`major/` 与 `minor/`（含中文别名目录 `主要角色/`、`次要角色/`）出现同名文件属于错误状态，`validate_book` 会报 error。
+
 `book_rules.md`
 : 可执行的规则：POV、禁手、体裁约束、力量 / 资源 / 限制、命名规则、风格约束、硬定局锁。包含作者不可妥协项与年代约束。
 
@@ -117,7 +124,7 @@ books/<book-id>/
 : 审计漂移账本——Auditor 逐维审计的处置记录。分两节：**已修复**（章 + 维度 + 问题 + 修复动作）与**已知漂移**（章 + 维度 + 问题 + 原因 + 计划）。仪表盘的"审计漂移"小节直接渲染本文件。模式 B 每章、模式 E 改写后必更新。
 
 `runtime/chapter-NNNN.intent.md`
-: 给下一章的人类可读契约：goal、outline node、must keep、must avoid、style emphasis、hook agenda、recent evidence。**每章都创建**，不仅在方向改变时创建。
+: 给下一章的人类可读契约：goal、outline node、前章末状态续接、must keep、must avoid、style emphasis、hook agenda、recent evidence。**每章都创建**，不仅在方向改变时创建。尾部含**实际偏离 Deviation Log**：落盘时若产出与 intent 的 goal / 必须场景 / 章末画面不一致，**只追加**偏离记录（偏离项 + 原因 + 去向章），不改写 intent 原有内容——intent 是写前契约，偏离只能留痕。
 
 `snapshots/<NNNN>/`
 : 每章落盘后的状态快照。详见 [快照契约](#快照契约)。
@@ -161,11 +168,11 @@ books/<book-id>/
 
 每章落盘必须遵循**事务式流程**，避免"章节正文成功但 state/hooks/index 只更新一部分"：
 
-1. **生成草稿**：在 `runtime/` 生成章节意图（`chapter-NNNN.intent.md`）和草稿。
-2. **双层质检**：驻场初筛（9 点）→ 深化审计（43 维 · 审-改循环）。审计、修订和账本校验完成前不写入正式章节目录。
+1. **生成草稿**：在 `runtime/` 生成章节意图（`chapter-NNNN.intent.md`，含「前章末状态续接」）和草稿。
+2. **双层质检**：驻场初筛（10 点）→ 深化审计（43 维 · 审-改循环）。审计、修订和账本校验完成前不写入正式章节目录。
 3. **创建快照**：写正式文件前创建旧状态快照（`snapshots/<NNNN-1>/`）。
-4. **按序写入**：按确定顺序写正文 → index → 摘要 → 状态 → 钩子。
-5. **一致性验证**：全部写入后运行一致性验证（事实表、道具账本、空间锚点、钩子依赖）。
+4. **按序写入**：按确定顺序写正文 → index → 摘要 → 状态 → 钩子 → `book.json`（status / updatedAt）→ intent「实际偏离」记录。**wordCount 禁手写**，必须由 `python scripts/rebuild_index.py <book-dir>` 生成。
+5. **一致性验证**：全部写入后运行 `python scripts/validate_book.py <book-dir>`（事实表证据、道具账本、空间锚点、钩子依赖、别名/双卡/字数核对）。FAIL 则修复后再落盘。
 6. **章末快照**：完成后创建章末快照（`snapshots/<NNNN>/`）。
 7. **失败处理**：任一步失败时保留草稿，并报告失败文件与恢复方式。
 
@@ -345,9 +352,9 @@ books/<book-id>/
 
 > 审计维 39（道具追踪）的判定基础。随身物件逐件登记——数量与存在的变化必须由显式事件驱动，不可无痕 ±1。
 
-| prop_id | 名称 | 类别 | 数量 | 容量单位 | 归属角色 | 存放位置 | 状态 | acquired_chapter（获得章） | disposed_chapter（处置章） | previous_owner（前主） | event_id（事件ID） | 最近变化章 | 最近变化事件 | 备注 |
+| prop_id | 名称 | 类别 | 数量 | 容量单位 | 归属角色 | 存放位置 | 状态 | acquired_chapter（获得章） | disposed_chapter（处置章） | previous_owner（前主） | origin（来历） | event_id（事件ID） | 最近变化章 | 最近变化事件 | 备注 |
 | --- | --- | --- | ---: | --- | --- | --- | --- | ---: | ---: | --- | --- | ---: | ---: | --- |
-| prop-001 | 回春丹 | 丹药 | 3 | 枚 | 主角 | 储物袋乙格 | active | 12 | — | — | evt-012 | 12 | 购买（散修集市） | 疗伤用 |
+| prop-001 | 回春丹 | 丹药 | 3 | 枚 | 主角 | 储物袋乙格 | active | 12 | - | - | 散修集市购得 | evt-012 | 12 | 购买（散修集市） | 疗伤用 |
 
 **列含义**：
 - **prop_id**：项目唯一 ID。
@@ -358,6 +365,7 @@ books/<book-id>/
 - **acquired_chapter**：获得章节。
 - **disposed_chapter**：处置章节（未处置填 `—`）。
 - **previous_owner**：前一所有权人（转移类事件必填）。
+- **origin**：来历一句话（如"散修集市购得"/"来历未知--主角不记得持有"）。**来历变化 = canon 变更**：须记录原值、新值、原因、生效章，并把对应旧事实标 `invalidated_chapter`（审计维 39「来历一致性」的判定基础）。
 - **event_id**：数量变化必须关联显式事件（考虑增加只追加的道具事件表，当前账本只保存最新汇总）。
 
 **治理规则**：

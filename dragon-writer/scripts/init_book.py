@@ -76,6 +76,13 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
 
     # 写 book.json
     ts = now_iso()
+    skill_ver = _contract.skill_version()
+    if not skill_ver:
+        print(
+            "警告：无法读取 _meta.json 中的 skill 版本（skillVersion 将为空），"
+            "请确认 skill 目录存在 _meta.json。",
+            file=sys.stderr,
+        )
     book_json = {
         "id": slug,
         "title": title,
@@ -87,7 +94,7 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
         "createdAt": ts,
         "updatedAt": ts,
         "schemaVersion": SCHEMA_VERSION,
-        "skillVersion": _contract.skill_version(),
+        "skillVersion": skill_ver,
     }
     write_json(os.path.join(book_dir, "book.json"), book_json)
 

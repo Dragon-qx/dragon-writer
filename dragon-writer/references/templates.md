@@ -42,9 +42,11 @@
   "createdAt": "<ISO timestamp>",
   "updatedAt": "<ISO timestamp>",
   "schemaVersion": "1.0.0",
-  "skillVersion": "1.0.0"
+  "skillVersion": "<由 init_book.py 盖章，勿手写>"
 }
 ```
+
+> `skillVersion` 由 `scripts/init_book.py` 从 `_meta.json` 读取盖章，**禁止手写**；续写每章落盘时同步 `status`（outlining → drafting）与 `updatedAt`。
 
 ## author_intent.md
 
@@ -116,6 +118,17 @@
 
 ```markdown
 # <Name>
+
+## 基本信息 Basic Info
+- 性别：男 / 女
+
+## canon 数字锚点 Number Anchors
+> 角色硬数字（年龄 / 日期 / 尺寸 / 数量）的集中权威表。卡内散文区与正文中涉及该角色的硬数字**必须与锚点表一致**；锚点变更 = canon 变更（记录原值、新值、原因、生效章）。审计维 3 以本表为正文数字比对的依据；validate_book 检查表内自相矛盾。
+
+| anchor_id | 事项 | 值 | 生效章 | 依据 |
+| --- | --- | --- | ---: | --- |
+| anchor-001 | 当前年龄 | 17 | 1 | 正文自述 |
+| anchor-002 | 身高 | 5尺2寸 | 1 | 出场基线 |
 
 ## 角色功能 Story Function
 
@@ -239,17 +252,19 @@
 > 审计维 39（道具追踪）的判定基础。随身物件、弹药、消耗品、贵重品逐件登记——数量与存在的变化必须由显式事件驱动（获得/失去/消耗/赠予/被夺/典当/碎裂），**不可无痕 ±1**。
 > 每章落盘时：把本章内所有"获得 / 消耗 / 丢失 / 赠予"事件对应到账本行；清零或新增行须注明事件。
 
-| prop_id | 名称 | 类别 | 数量 | 容量单位 | 归属角色 | 存放位置 | 状态 | acquired_chapter | disposed_chapter | previous_owner | event_id | 最近变化章 | 最近变化事件 | 备注 |
+| prop_id | 名称 | 类别 | 数量 | 容量单位 | 归属角色 | 存放位置 | 状态 | acquired_chapter | disposed_chapter | previous_owner | origin | event_id | 最近变化章 | 最近变化事件 | 备注 |
 | --- | --- | --- | ---: | --- | --- | --- | --- | ---: | ---: | --- | --- | ---: | ---: | --- |
-| prop-001 | 回春丹 | 丹药 | 3 | 枚 | 主角 | 储物袋乙格 | active | 12 | — | — | evt-012 | 12 | 购买（散修集市） | 疗伤用，每枚止血清创 |
-| prop-002 | 青锋剑 | 法器 | 1 | 柄 | 主角 | 背上剑鞘 | active | 3 | — | — | evt-003 | 3 | 获赠（师尊） | 下品法器 |
-| prop-003 | 下品灵石 | 货币 | 300 | 枚 | 主角 | 储物袋甲格 | active | 1 | — | — | evt-001 | 14 | 购买功法消耗 50 | — |
+| prop-001 | 回春丹 | 丹药 | 3 | 枚 | 主角 | 储物袋乙格 | active | 12 | — | — | 散修集市购得 | evt-012 | 12 | 购买（散修集市） | 疗伤用，每枚止血清创 |
+| prop-002 | 青锋剑 | 法器 | 1 | 柄 | 主角 | 背上剑鞘 | active | 3 | — | — | 师尊所赠 | evt-003 | 3 | 获赠（师尊） | 下品法器 |
+| prop-003 | 下品灵石 | 货币 | 300 | 枚 | 主角 | 储物袋甲格 | active | 1 | — | — | 入门时宗门发放 | evt-001 | 14 | 购买功法消耗 50 | — |
 
-**列含义**：prop_id（项目唯一 ID）、名称（**全文统一名**，维 39 名字一致性的硬性锚点）、类别（丹药 / 法器 / 符箓 / 货币 / 信物 / 衣物 / 杂物…）、数量（整数，非负）、容量单位（枚 / 株 / 锭 / 斛…）、归属角色、存放位置（储物袋甲格 / 袖中 / 背上剑鞘 / 洞府石床…）、状态（active / consumed / destroyed / lost / transferred / pawned）、acquired_chapter（获得章）、disposed_chapter（处置章）、previous_owner（前主）、event_id（数量变化必须关联显式事件）、最近变化章、最近变化事件（谁在哪一章做了什么导致本行变化）、备注。
+**列含义**：prop_id（项目唯一 ID）、名称（**全文统一名**，维 39 名字一致性的硬性锚点）、类别（丹药 / 法器 / 符箓 / 货币 / 信物 / 衣物 / 杂物…）、数量（整数，非负）、容量单位（枚 / 株 / 锭 / 斛…）、归属角色、存放位置（储物袋甲格 / 袖中 / 背上剑鞘 / 洞府石床…）、状态（active / consumed / destroyed / lost / transferred / pawned）、acquired_chapter（获得章）、disposed_chapter（处置章）、previous_owner（前主）、origin（来历一句话，如"散修集市购得"/"来历未知——主角不记得持有"）、event_id（数量变化必须关联显式事件）、最近变化章、最近变化事件（谁在哪一章做了什么导致本行变化）、备注。
 
 **治理规则**：
-- 新道具入章 → 准入：本行新增，最近变化章 = 本章，事件 = 来源。
+- 新道具入章 → 准入：本行新增，最近变化章 = 本章，事件 = 来源；origin 必填。
 - 道具状态/数量变化 → 修改本行，不可另起同名行（防"名字漂移"）。
+- **存放位置变化** → 同步改本行存放位置字段（本章正文末尾该道具实际位置即账本值）。
+- **origin 变化 = canon 变更** → 记录原值、新值、原因、生效章，并把 current_state 事实表中对应旧事实标 `invalidated_chapter`（防"不记得有这块玉佩"与"记得捡到经过"并存）。
 - 道具消失（碎裂 / 被夺 / 赠出 / 典当 / 耗尽）→ 数量归 0 或状态改为 consumed/destroyed/lost，事件必填。禁止删除账本行。
 - 消耗品（丹药 / 符箓 / 灵石）每用一次减一次——禁止"昨天吃两枚今天还有三枚"。
 
@@ -286,6 +301,8 @@
 | chapter | title | characters | events | state_changes | hook_activity | mood | chapter_type |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
 ```
+
+> **events 只允许记录本章正文实际发生的事件**——"计划在下一章才出现"的内容禁止提前写入本行或事实表（如"发现伤痕"若发生在第 N 章，不得写进第 N-1 章摘要）。事实表 evidence 机制从机器侧兜底同类问题（引文必须在来源章命中）。
 
 ## chapters/index.json
 
@@ -483,6 +500,13 @@
 
 ## Style Emphasis（风格强调）
 
+## 前章末状态续接 Scene Carry-Over（必填）
+> 上章末各在场角色的物理位置 / 姿态 / 着装 / 时间点，从上一章结尾与 chapter_summaries 提取。本章开场必须与之一致或有显式的时间 / 场景跳转标记；人物位置不得无交代地互换。
+
+- 上章末时间点：
+- 角色 A：位置 / 姿态 / 着装
+- 角色 B：位置 / 姿态 / 着装
+
 ## 章首 / 章末 Opening / Closing（对照 chapter-craft.md 类型库）
 - 开头类型（不得与近 3 章相同）：
 - 收尾断章类型（不得与近 3 章相同）：
@@ -491,6 +515,9 @@
 > 写"画面上出现什么"，不写"总结出什么"（如"他攥着碎玉走出殿门，雪落满肩"，而非"他下定了决心"）。
 
 ## Evidence Read（读过的证据）
+
+## 实际偏离 Deviation Log
+> 落盘时若实际产出与上面 intent 的 goal / 必须场景 / Required End-of-Chapter Change 不一致，在此追加一行（偏离项 + 原因 + 去向章）；无偏离写"无"。**只追加，不改写 intent 原有内容**（intent 是写前契约）。
 ```
 
 ## 快照 manifest
@@ -546,5 +573,7 @@
 - **事实改变**：本章有哪些事实从"未知"→"已知"、从"假"→"真"？（更新 current_state.md 事实表行）
 - **伏笔推进**：哪些 hook 从 open→progressing、progressing→resolved？（更新 pending_hooks.md）
 - **关系状态**：关系从 X 变 Y、资源从 A 变 B、冲突从 P 变 Q？（更新 current_state.md Relationships / Resources / Conflict）
+
+**hook 账本双向核对**（落盘自查项）：正文有的钩子推进，账本必须记（advance / resolve + last_advanced_chapter）；账本标了 advanced 的，正文必须真的出现对应事件。禁止"正文揭露了真相、hook 仍挂 progressing"或"hook 标了 advanced、正文没这回事"。
 
 写 `current_state.md` 时，优先写当前事实、少翻旧账。写 `chapter_summaries.md` 时，历史记录保持紧凑。

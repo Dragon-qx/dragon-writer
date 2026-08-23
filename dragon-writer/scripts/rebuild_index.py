@@ -12,6 +12,8 @@ import re
 import sys
 from typing import List, Optional, Tuple
 
+from _contract import count_words  # noqa: E402
+
 
 def parse_chapter_file(name: str) -> Optional[Tuple[int, str]]:
     """解析章节文件名，返回 (章号, 标题)。"""
@@ -37,10 +39,10 @@ def scan_chapters(chapters_dir: str) -> List[dict]:
             continue
         num, title = parsed
         full_path = os.path.join(chapters_dir, name)
-        # 统计字数
+        # 统计字数（与 validate_book 共用 _contract.count_words，单一算法源）
         with open(full_path, "r", encoding="utf-8") as f:
             text = f.read()
-        word_count = len(re.findall(r"[一-鿿A-Za-z0-9]+", text))
+        word_count = count_words(text)
         entries.append({
             "number": num,
             "file": name,

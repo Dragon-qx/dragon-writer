@@ -154,3 +154,12 @@ def file_sha256(path: str) -> str:
         for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return "sha256:" + h.hexdigest()
+
+
+def count_words(text: str) -> int:
+    """中英文章节字数统计（与 rebuild_index 共用，避免两处算法漂移）。
+
+    统计规则：连续的中文字符 / 英文字母数字串各计为一个"字"，
+    与 `rebuild_index.py` 的 wordCount 完全一致。
+    """
+    return len(re.findall(r"[一-鿿A-Za-z0-9]+", text))
