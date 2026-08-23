@@ -25,7 +25,7 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 | 模式 | 触发时机 | 做什么 |
 | --- | --- | --- |
 | **A · 新书** | 一句灵感 / 书名 / 题材 | 建目录、一口气产出全部基础文件骨架（意图 / 故事框架 / 卷纲 / 角色 / 规则 / 状态 / 钩子） |
-| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（9 项驻场初筛 + 43 个候选深化审计维度 · 审-改循环） → 落盘 |
+| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（10 项驻场初筛 + 43 个候选深化审计维度 · 审-改循环） → 落盘 |
 | **C · 导入** | 手里有旧章节，缺状态文件 | 从旧章反推基础文件，回放导入章节，续写 |
 | **D · 转向** | "换方向 / 下一章写 X" | 轻量调 `current_focus.md`，不改整份大纲 |
 | **E · 改写 / 修复** | 重写某一章 | **三步回滚机械**：恢复快照 → 清后续产物 → 重写 → 再走双层质检 |
@@ -36,7 +36,7 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 
 写一章不是写完就定稿，而是过两层：
 
-1. **驻场初筛（9 点）**——主角是否按动机行动、有没有人知道不该知道的、**空间是否一致、口袋里东西有没有无痕 ±1、常识是否合理**……直接、快速。
+1. **驻场初筛（10 点）**——主角是否按动机行动、有没有人知道不该知道的、**空间是否一致、口袋里东西有没有无痕 ±1、常识是否合理、本章开场与上章末物理状态是否衔接**……直接、快速。
 2. **43 个候选深化审计维度连续审计 + 审-改循环**——按体裁裁剪出本章节要跑的维度清单（仙侠默认 22–26 维），逐维出报告 → 修订 → **回头从第 1 维再过一遍**（防修 A 打坏 B） → 留痕审计漂移。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
 
 ### 写作仪表盘（双击即用）
@@ -85,16 +85,23 @@ dragon-writer/
     dashboard.html                 # 运行时仪表盘模板（零嵌入数据，构建产物）
     book-skeleton/                 # 书籍骨架（init_book 直接复制）
   scripts/
-    init_book.py                   # 创建新书
-    validate_book.py               # 验证书籍完整性
-    rebuild_index.py               # 重建章节 index
+    _contract.py                   # 共享契约加载器（canonical/aliases/字数/哈希）
+    init_book.py                   # 创建新书（含完整示例骨架复制）
+    validate_book.py               # 验证书籍完整性（账本一致性机器检查）
+    rebuild_index.py               # 重建章节 index（真实字数）
     snapshot_book.py               # 创建 / 验证快照
     rollback_book.py               # 安全回滚
     select_audit.py                # 选择激活的审计维度
+    auto_update.py                 # 自动更新检查 / 执行（CLI 优先，回退官方下载）
     build_dashboard.py             # 构建 self-contained dashboard（内联契约 + 质量检查）
     quality_check.py               # 静态质量检查（语法 / no-undef / CSP / 大小）
   tests/
     test_contract.py               # Python 文件契约测试
+    test_validate_checks.py        # 账本一致性检查测试（别名/双卡/字数/证据/锚点/性别/维度列）
+    test_auto_update.py            # 自动更新测试（版本比较/下载 URL/git 保护/CLI 参数）
+    fixtures/
+      standard-book/               # 标准书 fixture（通过全部验证）
+      timeline-demo-book/          # 时间线演示书 fixture
     js/
       test_dashboard.js            # Dashboard 单元测试（纯函数逻辑）
       test_integration.js          # Dashboard 集成测试（HTML 结构 / ARIA / 函数存在性）
@@ -138,6 +145,28 @@ dragon-writer/
 | sa-001 | 藏经阁三层 | 八角形中厅，八面经橱按八卦排列 | 西南角木梯 | 中厅八角石台（阵眼） | 7 |
 
 两个表的详细列含义与治理规则见 [`references/templates.md`](references/templates.md)。
+
+### 账本一致性校验（validate_book.py，落盘必跑）
+
+每章落盘后运行 `python scripts/validate_book.py <book-dir>`，用**确定性机器检查**把"正文内部矛盾、账本与正文脱节、文件层分叉"拦在产出环节，而不是靠人工审计兜底：
+
+| 检查 | 抓什么 | 级别 |
+| --- | --- | --- |
+| 规范名 / 别名并存 | `audit-drift.md` 与 `audit_drift.md` 双源 | error |
+| 角色同名双卡 | 同一角色同时存在于 `major/` 与 `minor/`（晋升未清理） | error |
+| wordCount 真值 | index 字数与正文重算值偏差 >5%（禁手写，须跑 `rebuild_index.py`） | error |
+| 事实表证据链 | fact 的 `evidence` 引文必须在来源章正文命中（防捏造事实） | error |
+| 道具 origin 漂移 | origin（来历）跨快照变化而未同步失效旧事实 | warning |
+| canon 数字锚点自冲突 | 角色卡锚点表同事项多值无递增生效章 | warning |
+| 性别称谓 lint | 女角色被"男的"、男角色被"女的"错称 | warning |
+| 维度列一致性 | 角色卡时间线出现 book_rules 未声明的列（如仙侠题材的三围） | warning |
+| book.json 生命周期 | status 陈旧 / updatedAt 落后 / skillVersion 不符 | warning |
+
+配套的新 schema 字段：事实表 `evidence`（原文短引）、道具账本 `origin`（来历）、角色卡 `基本信息·性别` + `canon 数字锚点`、`book_rules`「物理数据维度」「逻辑数据维度」声明（时间线列按题材声明，未声明的列不出现）。
+
+### 完整示例书骨架（book-skeleton）
+
+`assets/book-skeleton/` 是一本**内部自洽的完整示例书**（《霜寒之纪》/陆恒），19 个文件全部有可抄的完整示例、**零空目录**：两个示例章节、三张角色卡（含性别 + 数字锚点 + 时间线）、事实表带证据、道具账本带来历、空间锚点带登记、intent 带"前章末状态续接 + 实际偏离记录"。`init_book.py` 建新书时直接复制，模型照此改写，不再凭空猜结构。
 
 ---
 
@@ -240,8 +269,13 @@ python scripts/build_dashboard.py
 # 静态质量检查（语法 / no-undef / CSP / 大小，25 项）
 python scripts/quality_check.py
 
-# Python 文件契约测试
-python -m pytest tests/test_contract.py -v
+# Python 全套测试（契约 + 账本一致性检查 + 自动更新，44 项）
+python -m pytest tests/ -q
+
+# 单独跑某一块
+python -m pytest tests/test_contract.py -v        # 文件契约
+python -m pytest tests/test_validate_checks.py -v # 账本一致性检查
+python -m pytest tests/test_auto_update.py -v     # 自动更新
 ```
 
 ---
