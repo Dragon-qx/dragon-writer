@@ -77,7 +77,7 @@ Canvas 力导向关系图 + 角色列表：
 | 模式 | 触发时机 | 做什么 |
 | --- | --- | --- |
 | **A · 新书** | 一句灵感 / 书名 / 题材 | 建目录、一口气产出全部基础文件骨架 |
-| **B · 续写** | 书已存在 | 读工作集 → 起草 → 双层质量门禁（9 项初筛 + 43 维深化审计）→ 落盘 |
+| **B · 续写** | 书已存在 | 读工作集 → 起草 → 双层质量门禁（10 项初筛 + 43 维深化审计）→ 落盘 |
 | **C · 导入** | 有旧章节，缺状态文件 | 从旧章反推基础文件，回放导入，续写 |
 | **D · 转向** | "换方向 / 下一章写 X" | 轻量调 `current_focus.md`，不改整份大纲 |
 | **E · 改写 / 修复** | 重写某一章 | 恢复快照 → 清后续产物 → 重写 → 再走质检 |
@@ -108,9 +108,11 @@ python dragon-writer/scripts/quality_check.py
 node dragon-writer/tests/js/test_dashboard.js
 node dragon-writer/tests/js/test_integration.js
 
-# Python 文件契约测试
-python -m pytest dragon-writer/tests/test_contract.py -v
+# Python 全套测试（契约 + 账本一致性检查 + 自动更新）
+python -m pytest dragon-writer/tests/ -q
 ```
+
+落盘后运行 `python dragon-writer/scripts/validate_book.py <book-dir>` 做**账本一致性校验**：别名/角色双卡、wordCount 真值、事实表证据引文、道具 origin 漂移、canon 数字锚点、性别称谓、维度列一致性、book.json 生命周期——机器检查把正文/账本矛盾拦在产出环节。详见 [dragon-writer/README.md](dragon-writer/README.md)。
 
 ## 许可证
 
