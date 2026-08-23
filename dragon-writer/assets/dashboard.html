@@ -2204,32 +2204,141 @@ const SettingsContent = {
 };
 
 /* ---------- 关系图数据构建（供 Characters 组件使用） ---------- */
-const buildGraph = (roles) => {
+/* 关系词典：把整段描述收敛为连线上显示的单词标签（按文中最后一次出现取词，
+   演进类描述「不屑→敌意→敬意」以当前状态为准） */
+const REL_WORDS = [
+  '生死相依', '青梅竹马', '未婚妻', '未婚夫', '前女友', '前男友', '道侣', '情侣', '恋人', '夫妻', '妻子', '丈夫',
+  '挚爱', '红颜', '知己', '暗恋', '仰慕', '心动', '喜欢', '好感', '师徒', '师父', '师尊', '徒弟', '弟子',
+  '师兄', '师弟', '师姐', '师妹', '父子', '父女', '母子', '母女', '兄弟', '兄妹', '姐弟', '姐妹',
+  '父亲', '母亲', '儿子', '女儿', '至亲', '家人', '挚友', '好友', '朋友', '同门', '同僚', '同伴',
+  '战友', '搭档', '盟友', '同盟', '主仆', '主人', '下属', '仆从', '护卫', '恩人', '仇人', '仇敌',
+  '宿敌', '死敌', '敌对', '对手', '劲敌', '情敌', '宿怨', '棋子', '利用', '监视', '庇护', '守护',
+  '追杀', '雇佣', '妖契', '血契', '命契', '契约', '羁绊', '旧识', '相识', '前辈', '后辈', '上司',
+  '同事', '同学', '好奇', '警惕', '戒备', '依赖', '亏欠',
+];
+
+// 把关系描述收敛为单个词语标签
+const relWord = (desc) => {
+  if (!desc) return '';
+  const d = String(desc).replace(/\*\*/g, '').trim();
+  // 0. 未相识特判
+  if (/尚未认识|未接触|未曾谋面|互不认识|不认识|未相遇/.test(d)) return '陌生';
+  // 1. 规范格式「对方 — 关系词 — 说明」：首段即单词
+  const dashParts = d.split('—').map(s => s.trim()).filter(Boolean);
+  if (dashParts.length >= 2 && dashParts[0].length <= 6 && !/[。，；→：:（(]/.test(dashParts[0])) return dashParts[0];
+  // 2. 箭头演进链：取最终态（≤6 字才视为单词）
+  if (d.includes('→')) {
+    const last = d.split('→').pop().replace(/[（(].*?[）)]/g, '').replace(/[。，；,;.\s]/g, '');
+    if (last && last.length <= 6) return last;
+  }
+  // 3. 词典匹配：取文中最后一次出现的词
+  let hit = null;
+  for (const w of REL_WORDS) {
+    let i = -1;
+    while ((i = d.indexOf(w, i + 1)) >= 0) { if (!hit || i >= hit.i) hit = { w, i }; }
+  }
+  if (hit) return hit.w;
+  // 4. 兜底：首句截断
+  const first = d.split(/[。，；,;]/)[0].replace(/[（(].*?[）)]/g, '').trim();
+  return first.length <= 6 ? first : first.slice(0, 5) + '…';
+};
+
+// 解析「对方名：描述」「对方名 — 描述」行（先剥离 ** 与括号注释）
+const parseRelLine = (line) => {
+  const clean = String(line).replace(/\*\*/g, '').trim();
+  const m = clean.match(/^([^:：—\-（(]{1,12})\s*[—\-:：]\s*(.+)$/);
+  if (!m) return null;
+  return { name: m[1].replace(/[（(].*$/, '').trim(), desc: m[2].trim() };
+};
+
+const buildGraph = (roles, currentState) => {
   const accent = Utils.theme.get('accent');
   const minorColor = Utils.theme.get('textMuted');
-  const nodes = roles.map((r, i) => ({
-    i, name: r.name, tier: r.tier,
-    color: /次要|minor/.test(r.tier) ? minorColor : accent,
-    func: MDParser.extractSection(r.text, 'Story [Ff]unction|故事功能|角色[定定]?[位义]|功能').slice(0, 6).join('；'),
-    desire: MDParser.extractField(r.text, ['欲望', 'desire']) || MDParser.extractSection(r.text, '[Dd]esire|欲望').slice(0, 6).join('；'),
-    fear: MDParser.extractField(r.text, ['恐惧', 'fear']) || MDParser.extractSection(r.text, '[Ff]ear|恐惧').slice(0, 6).join('；'),
-    state: MDParser.extractField(r.text, ['当前状态', 'current state']) || MDParser.extractSection(r.text, '[Cc]urrent [Ss]tate|当前状态').slice(0, 6).join('；'),
-    arc: MDParser.extractField(r.text, ['弧线', '成长', 'arc']) || MDParser.extractSection(r.text, '[Aa]rc|弧线|成长').slice(0, 6).join('；'),
-    secrets: MDParser.extractSection(r.text, '[Ss]ecrets|秘密').slice(0, 6).join('；'),
-  }));
+  // 角色显示名：优先取文内一级标题（兼容拼音文件名，如 lu_chen.md → 陆尘）
+  const roleName = (r) => {
+    const m = r.text && r.text.match(/^#\s*([^\n（(]+)/);
+    return (m ? m[1] : r.name).trim();
+  };
+  const nodes = roles.map((r, i) => {
+    const heading = r.text && r.text.match(/^#\s*([^\n]+)/);
+    const func = MDParser.extractSection(r.text, 'Story [Ff]unction|故事功能|角色[定定]?[位义]|功能').slice(0, 6).join('；');
+    return {
+      i, name: roleName(r), tier: r.tier,
+      // 主角标记：标题注记（主角）；功能描述以「男主/主角」等开头为强标记
+      prot: !!(heading && /主角/.test(heading[1])),
+      protStrong: /^(男主|主角|主人公|主视角)/.test(func) || /protagonist/i.test(func),
+      protWeak: /男主|女主|主角|主人公|主视角/i.test(func),
+      color: /次要|minor/.test(r.tier) ? minorColor : accent,
+      func,
+      desire: MDParser.extractField(r.text, ['欲望', 'desire']) || MDParser.extractSection(r.text, '[Dd]esire|欲望').slice(0, 6).join('；'),
+      fear: MDParser.extractField(r.text, ['恐惧', 'fear']) || MDParser.extractSection(r.text, '[Ff]ear|恐惧').slice(0, 6).join('；'),
+      state: MDParser.extractField(r.text, ['当前状态', 'current state']) || MDParser.extractSection(r.text, '[Cc]urrent [Ss]tate|当前状态').slice(0, 6).join('；'),
+      arc: MDParser.extractField(r.text, ['弧线', '成长', 'arc']) || MDParser.extractSection(r.text, '[Aa]rc|弧线|成长').slice(0, 6).join('；'),
+      secrets: MDParser.extractSection(r.text, '[Ss]ecrets|秘密').slice(0, 6).join('；'),
+    };
+  });
   const nameIdx = new Map(nodes.map(nd => [nd.name.toLowerCase(), nd.i]));
+  // 规范化查找：剥离 ** 与括号注释后精确匹配
+  const findNode = (name) =>
+    nameIdx.get(String(name).replace(/\*\*/g, '').replace(/[（(].*$/, '').trim().toLowerCase());
+
   const edges = [];
-  roles.forEach(r => {
+  const edgeSeen = new Set(); // 无向去重
+  const addEdge = (si, ti, label, desc) => {
+    if (si === undefined || ti === undefined || si === ti) return;
+    const k = Math.min(si, ti) + '|' + Math.max(si, ti);
+    if (edgeSeen.has(k)) return;
+    edgeSeen.add(k);
+    edges.push({ s: si, t: ti, label, desc: desc || label });
+  };
+
+  // 来源 1：角色卡的「人物关系 / Relationships / 关系网」段落
+  roles.forEach((r, si) => {
     const lines = MDParser.extractSection(r.text, '[Rr]elationships?|关系[网战]?');
-    const si = nodes.findIndex(nd => nd.name === r.name);
     for (const l of lines) {
-      const m = l.match(/^([^:：\-（\(]{1,20})\s*[—\-:：]\s*(.+)$/);
-      if (m) {
-        const ti = nameIdx.get(m[1].trim().toLowerCase());
-        if (ti !== undefined && ti !== si) edges.push({ s: si, t: ti, label: m[2].trim() });
-      }
+      const p = parseRelLine(l);
+      if (!p) continue;
+      addEdge(si, findNode(p.name), relWord(p.desc), p.desc);
     }
   });
+
+  // 来源 2：current_state.md 的「人物关系 Relationships」段落
+  // 支持「A ↔ B：描述」行与主角中心表格（| 角色 | 与主角关系 | … |）
+  if (currentState) {
+    const lines = MDParser.extractSection(currentState, '[Rr]elationships?|关系[网战]?');
+    // 主角定位（强 → 弱 → 角色卡连线最多 → 第一个主要角色）
+    const isMinor = n => /次要|minor/.test(n.tier);
+    let pi = nodes.findIndex(n => !isMinor(n) && (n.prot || n.protStrong));
+    if (pi < 0) pi = nodes.findIndex(n => n.prot || n.protStrong);
+    if (pi < 0) pi = nodes.findIndex(n => !isMinor(n) && n.protWeak);
+    if (pi < 0 && edges.length) {
+      const deg = nodes.map(() => 0);
+      for (const e of edges) { deg[e.s]++; deg[e.t]++; }
+      let bestDeg = 0;
+      nodes.forEach((n, i) => { if (!isMinor(n) && deg[i] > bestDeg) { bestDeg = deg[i]; pi = i; } });
+    }
+    if (pi < 0) pi = nodes.findIndex(n => !isMinor(n));
+    for (const l of lines) {
+      if (/^\|/.test(l)) {
+        // 表格行：col1 = 对方，col2 = 关系描述
+        const cells = l.replace(/^\||\|$/g, '').split('|').map(s => s.trim());
+        if (cells.length < 2) continue;
+        if (/^[-—:\s]+$/.test(cells.join(''))) continue;      // 分隔行
+        if (/角色|关系方|对象|姓名/.test(cells[0])) continue;   // 表头
+        if (pi >= 0) addEdge(pi, findNode(cells[0]), relWord(cells[1]), cells[1]);
+        continue;
+      }
+      // 「A ↔ B：描述」双方具名行
+      const both = l.replace(/\*\*/g, '').match(/^([^:：—\-（(]{1,12})\s*↔\s*([^:：—\-（(]{1,12})\s*[：:]\s*(.+)$/);
+      if (both) {
+        addEdge(findNode(both[1]), findNode(both[2]), relWord(both[3]), both[3].trim());
+        continue;
+      }
+      // 普通「对方：描述」行：挂到主角
+      const p = parseRelLine(l);
+      if (p && pi >= 0) addEdge(pi, findNode(p.name), relWord(p.desc), p.desc);
+    }
+  }
   return { nodes, edges };
 };
 
@@ -2763,7 +2872,9 @@ const GraphEngine = (() => {
     ].filter(a => a[1]);
     const rels = edges.filter(e => e.s === i || e.t === i).map(e => {
       const o = nodes[e.s === i ? e.t : e.s];
-      return `<div class="rel-item"><span class="rname">${Utils.escHtml(o.name)}</span>${e.label ? ' — ' + MDParser.parseInline(e.label) : ''}</div>`;
+      // 连线上显示单词标签；悬停可看原始完整描述
+      const tip = e.desc && e.desc !== e.label ? ` title="${Utils.escHtml(e.desc)}"` : '';
+      return `<div class="rel-item"${tip}><span class="rname">${Utils.escHtml(o.name)}</span>${e.label ? ' — ' + MDParser.parseInline(e.label) : ''}</div>`;
     });
     info.innerHTML = `<div class="name">${Utils.escHtml(n.name)}</div><div class="tier">${Utils.escHtml(n.tier)}</div>` +
       (fields.length ? `<dl>${fields.map(([k, v]) => `<dt>${Utils.escHtml(k)}</dt><dd>${MDParser.parseInline(v)}</dd>`).join('')}</dl>` : '') +
@@ -2812,7 +2923,7 @@ const Characters = {
 
   render() {
     const roles = Store.get('roles');
-    const graph = buildGraph(roles);
+    const graph = buildGraph(roles, (Store.get('files') || {}).current_state);
     Store.set('graph', graph);
 
     document.getElementById('panel-chars').innerHTML = `
