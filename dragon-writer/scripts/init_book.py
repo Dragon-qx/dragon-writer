@@ -5,7 +5,8 @@
     python scripts/init_book.py --title "霜寒之纪" --genre 仙侠 --root ./books
 
 生成 slug、创建目录、复制书籍骨架、写入时间戳和 schemaVersion、
-注入 dashboard、创建初始快照。避免覆盖已有书籍目录。
+注入 dashboard。第 0 章 closed 快照必须在基础文件填写完成后另行创建，
+避免把空白占位模板误当成可回滚基线。避免覆盖已有书籍目录。
 """
 
 import argparse
@@ -71,7 +72,7 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
         os.path.join(book_dir, "story", "roles", "major"),
         os.path.join(book_dir, "story", "roles", "minor"),
         os.path.join(book_dir, "story", "runtime"),
-        os.path.join(book_dir, "story", "snapshots", "0000"),
+        os.path.join(book_dir, "story", "snapshots"),
     ]
     for d in dirs:
         os.makedirs(d, exist_ok=True)
@@ -131,19 +132,6 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
     # 注入 dashboard
     if os.path.isfile(DASHBOARD_TEMPLATE):
         shutil.copy2(DASHBOARD_TEMPLATE, os.path.join(book_dir, "dashboard.html"))
-
-    # 创建初始快照 manifest
-    snapshot_dir = os.path.join(book_dir, "story", "snapshots", "0000")
-    manifest = {
-        "snapshotVersion": "1.0.0",
-        "chapter": 0,
-        "createdAt": ts,
-        "includedFiles": [],
-        "fileHashes": {},
-        "skillVersion": _contract.skill_version(),
-        "schemaVersion": SCHEMA_VERSION,
-    }
-    write_json(os.path.join(snapshot_dir, "manifest.json"), manifest)
 
     print(f"已创建新书：{book_dir}")
     print(f"  slug: {slug}")

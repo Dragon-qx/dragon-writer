@@ -189,6 +189,12 @@ class TestFactEvidence:
         result = validate(book)
         assert not messages(result, "errors", "证据引文在章节 1 正文未命中")
 
+    def test_punctuation_only_evidence_is_error(self, tmp_path):
+        book = copy_std(tmp_path)
+        self._add_evidence(book, [("fact-001", "—"), ("fact-002", "林逸")])
+        result = validate(book)
+        assert messages(result, "errors", "事实证据不得为空或仅含标点")
+
     def test_missing_column_is_warning(self, tmp_path):
         book = copy_std(tmp_path)  # 原 fixture 无 evidence 列
         result = validate(book)
@@ -235,6 +241,12 @@ class TestKnowledgeAcquisition:
         result = validate(book)
         assert not messages(result, "errors", "角色获知证据")
 
+    def test_punctuation_only_acquisition_evidence_is_error(self, tmp_path):
+        book = copy_std(tmp_path)
+        self._replace_fact_table(book, "—")
+        result = validate(book)
+        assert messages(result, "errors", "角色获知证据不得为空或仅含标点")
+
 
 class TestRelationshipPermissions:
     """T4.4：关系许可必须引用时间轴事件与正文证据。"""
@@ -264,6 +276,22 @@ class TestRelationshipPermissions:
             f.write("\n".join(lines))
         result = validate(book)
         assert messages(result, "errors", "关系变化证据在章节 2 正文未命中")
+
+    def test_punctuation_only_relationship_evidence_is_error(self, tmp_path):
+        book = copy_skeleton(tmp_path)
+        state_path = os.path.join(book, "story", "current_state.md")
+        with open(state_path, "r", encoding="utf-8") as f:
+            lines = f.read().split("\n")
+        row_index = next(i for i, line in enumerate(lines) if line.startswith("| rel-002"))
+        cells = lines[row_index].split("|")
+        header = next(line for line in lines if line.startswith("| pair_id")).split("|")
+        evidence_index = next(i for i, cell in enumerate(header) if cell.strip() == "evidence")
+        cells[evidence_index] = " — "
+        lines[row_index] = "|".join(cells)
+        with open(state_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+        result = validate(book)
+        assert messages(result, "errors", "关系变化证据不得为空或仅含标点")
 
 
 class TestPropOriginDrift:

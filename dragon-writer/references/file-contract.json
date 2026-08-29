@@ -1,6 +1,6 @@
 {
   "$schema": "https://dragon-writer.github.io/schemas/file-contract.json",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Dragon Writer 文件契约的机器可读版本。文档、脚本、仪表盘共用这一份，避免多处重复维护。",
 
   "files": {
@@ -86,14 +86,14 @@
       "required": false,
       "layer": "runtime",
       "consumer": ["scripts"],
-      "description": "4.0 权威章节意图：时间架构、必要场景节点、知识/关系变化与正文证据"
+      "description": "4.1 权威章节意图：分段时间架构、必要场景节点、稳定事实/关系引用、情节指纹与正文证据"
     },
     "story/runtime/chapter-{nnnn}.intent.md": {
       "path": "story/runtime/chapter-{nnnn}.intent.md",
       "required": false,
       "layer": "generated",
       "consumer": ["humans"],
-      "description": "由 intent.json 单向生成的只读人类视图；3.x 项目兼容为旧权威 intent"
+      "description": "由 intent.json 单向生成的只读人类视图；旧版 Markdown 仅供迁移读取，不再是权威源"
     },
     "story/runtime/chapter-{nnnn}.transaction.json": {
       "path": "story/runtime/chapter-{nnnn}.transaction.json",
@@ -156,9 +156,11 @@
     "description": "这些目录下的文件不会被读取为权威数据（快照、备份、rewrite 候选等）。路径相对书根，均位于 story/ 下。",
     "patterns": [
       "^story/snapshots/",
+      "^story/rollback-archive/",
       "^story/runtime/rewrites/",
       "^story/runtime/rewrite/",
       "^story/runtime/chapter-\\d+\\.draft\\.md$",
+      "^story/runtime/chapter-\\d+\\.work-packet\\.(?:md|json)$",
       "^story/runtime/chapter-\\d+\\.intent\\.legacy\\.md$",
       "^story/runtime/.*\\.superseded-",
       "^story/rewrite/",

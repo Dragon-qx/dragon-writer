@@ -9,6 +9,7 @@ import sys
 from typing import Iterable, List, Optional, Tuple
 
 from _contract import file_sha256, now_iso, safe_join
+from _schema import validate_document
 
 
 NEUTRAL_PROMPT = (
@@ -17,32 +18,6 @@ NEUTRAL_PROMPT = (
     "每项包含：严重度、正文位置与短引、读者影响、修复方向。"
     "不要续写、改写正文，也不要声称核实了正文之外的事实；证据不足时写 unknown。"
 )
-
-
-def _chapter_path(book_dir: str, chapter: int, prefer_draft: bool) -> Optional[str]:
-    if prefer_draft:
-        runtime = os.path.join(book_dir, "story", "runtime")
-        for name in (f"chapter-{chapter:04d}.draft.md", f"chapter-{chapter}.draft.md"):
-            path = os.path.join(runtime, name)
-            if os.path.isfile(path):
-                return path
-    matches = sorted(glob.glob(os.path.join(book_dir, "chapters", f"{chapter:04d}_*.md")))
-    if not matches:
-        matches = sorted(glob.glob(os.path.join(book_dir, "chapters", f"{chapter}_*.md")))
-    return matches[0] if matches else None
-
-
-def build_packet(book_dir: str, chapters: Iterable[int], prefer_draft: bool = True) -> str:
-    """3.x 兼容 API；新工作流应使用 build_explicit_packet。"""
-    parts = [NEUTRAL_PROMPT]
-    for chapter in chapters:
-        path = _chapter_path(book_dir, chapter, prefer_draft)
-        if not path:
-            raise FileNotFoundError(f"找不到第 {chapter} 章正文或草稿")
-        with open(path, "r", encoding="utf-8") as f:
-            manuscript = f.read().strip()
-        parts.append(f"===== 第 {chapter} 章 =====\n{manuscript}")
-    return "\n\n".join(parts) + "\n"
 
 
 def _final_path(book_dir: str, chapter: int) -> str:
@@ -73,15 +48,22 @@ def build_explicit_packet(
     final_chapters = list(final_chapters)
     if draft_chapter is not None and draft_chapter in final_chapters:
         raise ValueError("同一章不能同时作为 final 与 draft 进入冷读包")
-    sources: List[Tuple[int, str, str]] = []
+    sources: List[Tuple[int, str, str, dict]] = []
     for chapter in final_chapters:
-        sources.append((chapter, "final", _final_path(book_dir, chapter)))
+        final = _final_path(book_dir, chapter)
+        from chapter_txn import load_transaction, verify_closed_bindings
+        txn = load_transaction(book_dir, chapter)
+        errors = verify_closed_bindings(book_dir, chapter, txn)
+        if errors:
+            raise ValueError(f"冷读正式稿第 {chapter} 章不是有效封板：" + "; ".join(errors))
+        sources.append((chapter, "final", final, txn))
     if draft_chapter is not None:
         draft = _draft_only_path(book_dir, draft_chapter)
-        from chapter_txn import audit_path, load_transaction, verify_transaction
+        from chapter_txn import _verify_gate_bindings, audit_path, load_transaction, verify_transaction
         txn = load_transaction(book_dir, draft_chapter)
-        if not txn or verify_transaction(txn) or txn.get("state") not in {"gated", "audited"}:
+        if not txn or verify_transaction(txn, draft_chapter) or txn.get("state") not in {"gated", "audited"}:
             raise ValueError("冷读草稿必须处于可验证的 gated/audited 事务")
+        _verify_gate_bindings(book_dir, draft_chapter, txn)
         if txn.get("draftSha256") != file_sha256(draft):
             raise ValueError("冷读草稿哈希与事务不一致")
         audit_manifest = audit_path(book_dir, draft_chapter)
@@ -98,15 +80,15 @@ def build_explicit_packet(
             or informed.get("reportSha256") != file_sha256(report)
         ):
             raise ValueError("主代理知情审计缺失、失败或哈希已失效")
-        sources.append((draft_chapter, "draft", draft))
+        sources.append((draft_chapter, "draft", draft, txn))
     if not sources:
         raise ValueError("至少指定一个 --final/--final-range 或 --draft")
-    if len({chapter for chapter, _, _ in sources}) != len(sources):
+    if len({chapter for chapter, _, _, _ in sources}) != len(sources):
         raise ValueError("同一章不能同时作为 final 与 draft 进入冷读包")
     sources.sort(key=lambda item: item[0])
     parts = [NEUTRAL_PROMPT]
     manifest_sources = []
-    for chapter, role, path in sources:
+    for chapter, role, path, txn in sources:
         with open(path, "r", encoding="utf-8") as handle:
             manuscript = handle.read().strip()
         parts.append(f"===== 第 {chapter} 章 =====\n{manuscript}")
@@ -115,16 +97,86 @@ def build_explicit_packet(
             "role": role,
             "path": os.path.relpath(path, book_dir).replace(os.sep, "/"),
             "sha256": file_sha256(path),
+            "transactionState": txn.get("state"),
+            "transactionEventHash": txn.get("events", [{}])[-1].get("eventHash", ""),
         })
     packet = "\n\n".join(parts) + "\n"
     import hashlib
     manifest = {
-        "schemaVersion": "4.0",
+        "schemaVersion": "4.1",
         "createdAt": now_iso(),
         "sources": manifest_sources,
         "packetSha256": "sha256:" + hashlib.sha256(packet.encode("utf-8")).hexdigest(),
     }
     return packet, manifest
+
+
+def verify_packet_manifest(book_dir: str, manifest: dict,
+                           expected_draft_chapter: Optional[int] = None) -> List[str]:
+    """复算纯正文包及所有来源绑定；manifest 本身不能替代稿源验证。"""
+    errors = validate_document(manifest, "cold-read-source.schema.json")
+    if errors:
+        return errors
+    rows = manifest["sources"]
+    identities = [(row["chapter"], row["role"]) for row in rows]
+    if identities != sorted(identities, key=lambda item: item[0]) or len(identities) != len(set(identities)):
+        errors.append("冷读稿源必须按章号排序且 chapter/role 不得重复")
+    drafts = [row for row in rows if row["role"] == "draft"]
+    if expected_draft_chapter is not None:
+        if len(drafts) != 1 or drafts[0]["chapter"] != expected_draft_chapter:
+            errors.append("冷读稿源必须恰好绑定当前章唯一草稿")
+    parts = [NEUTRAL_PROMPT]
+    for row in rows:
+        chapter, role = row["chapter"], row["role"]
+        try:
+            path = safe_join(book_dir, row["path"])
+            expected_path = _final_path(book_dir, chapter) if role == "final" else _draft_only_path(book_dir, chapter)
+        except (OSError, ValueError) as exc:
+            errors.append(str(exc))
+            continue
+        if os.path.normcase(os.path.abspath(path)) != os.path.normcase(os.path.abspath(expected_path)):
+            errors.append(f"第 {chapter} 章 {role} 路径不是唯一规范稿源")
+            continue
+        if not os.path.isfile(path) or row["sha256"] != file_sha256(path):
+            errors.append(f"第 {chapter} 章 {role} 稿源哈希不一致")
+            continue
+        from chapter_txn import _verify_gate_bindings, load_transaction, verify_closed_bindings, verify_transaction
+        txn = load_transaction(book_dir, chapter)
+        txn_errors = verify_transaction(txn or {}, chapter)
+        if txn_errors:
+            errors.append(f"第 {chapter} 章事务无效：" + "; ".join(txn_errors))
+            continue
+        source_event = next(
+            (event for event in txn["events"] if event.get("eventHash") == row["transactionEventHash"]),
+            None,
+        )
+        if not source_event or source_event.get("to") != row["transactionState"]:
+            errors.append(f"第 {chapter} 章稿源登记的事务状态或事件哈希不在当前有效链中")
+            continue
+        try:
+            if role == "final":
+                bound = verify_closed_bindings(book_dir, chapter, txn)
+                if bound:
+                    errors.append(f"第 {chapter} 章正式稿不是有效封板：" + "; ".join(bound))
+                    continue
+            else:
+                if txn.get("state") not in {"gated", "audited"}:
+                    errors.append(f"第 {chapter} 章草稿事务状态不可用于冷读")
+                    continue
+                _verify_gate_bindings(book_dir, chapter, txn)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            errors.append(str(exc))
+            continue
+        with open(path, "r", encoding="utf-8") as handle:
+            manuscript = handle.read().strip()
+        parts.append(f"===== 第 {chapter} 章 =====\n{manuscript}")
+    if not errors:
+        import hashlib
+        packet = "\n\n".join(parts) + "\n"
+        actual = "sha256:" + hashlib.sha256(packet.encode("utf-8")).hexdigest()
+        if manifest["packetSha256"] != actual:
+            errors.append("冷读包哈希无法由登记稿源确定性复算")
+    return errors
 
 
 def _parse_range(value: str) -> List[int]:

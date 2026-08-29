@@ -71,3 +71,16 @@ class TestRollbackManifestHasRoles:
         plan = plan_rollback(str(tmp_path), chapter=1)
         assert plan["ok"]
         assert any(p.startswith("story/roles/") for p in plan["restore_files"])
+
+    def test_rollback_rejects_non_current_snapshot_protocol(self, tmp_path):
+        shutil.copytree(os.path.join(FIXTURES_DIR, "standard-book"), str(tmp_path),
+                        dirs_exist_ok=True)
+        create_snapshot(str(tmp_path), chapter=1, dry_run=False, force=True)
+        manifest_path = tmp_path / "story" / "snapshots" / "0001" / "manifest.json"
+        import json
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["snapshotVersion"] = "1.0.0"
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+        plan = plan_rollback(str(tmp_path), chapter=1)
+        assert not plan["ok"]
+        assert "closed 快照" in plan["error"]

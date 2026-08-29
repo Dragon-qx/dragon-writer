@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragon-writer.local/schemas/cold-read-source.schema.json",
+  "title": "Dragon Writer Cold Read Source Manifest",
+  "type": "object",
+  "required": ["schemaVersion", "createdAt", "sources", "packetSha256"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"enum": ["4.0", "4.1"]},
+    "createdAt": {"type": "string", "minLength": 1},
+    "packetSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["chapter", "role", "path", "sha256", "transactionState", "transactionEventHash"],
+        "additionalProperties": false,
+        "properties": {
+          "chapter": {"type": "integer", "minimum": 1},
+          "role": {"enum": ["final", "draft"]},
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "transactionState": {"enum": ["gated", "audited", "closed", "legacy_closed", "imported_closed"]},
+          "transactionEventHash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

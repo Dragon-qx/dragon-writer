@@ -18,17 +18,11 @@ python scripts/check_chapter_draft.py <book-dir> --chapter <NNNN> --preflight
 python scripts/chapter_txn.py <book-dir> --chapter <NNNN> prepare
 ```
 
-`prepare` 会验证上一章结构化事务必须为 `closed` 或经迁移确认的 `legacy_closed`。3.13 项目先运行 `python scripts/migrate_3_13_to_4_0.py <book-dir>`；迁移不会伪造历史审计或缺失的写作计划。
+`prepare` 会重验上一章完整封板及其外部哈希，并确认当前章恰好是最后一章之后的下一章。旧项目先运行 `python scripts/migrate_3_13_to_4_0.py <book-dir>` 查看计划，再由用户确认后加 `--execute`；只有 import manifest 精确绑定的正式稿会成为 `imported_closed`。
 
-### 2. 重建有边界的主代理工作包
+### 2. 建立结构化意图
 
-每章重新读取并裁剪：作者不可妥协项、当前卷节点与规则；相关故事时钟、信息获知行、关系许可行、道具与空间行；相关角色卡和钩子；上一章末尾、近章摘要与近 5–10 章新意指纹；会影响本章的未解决漂移。
-
-工作包只供主代理使用。对话已堆积多章全文、多个报告，或主代理不能逐项复述当前章硬约束时，立即从这些文件重新取数后再继续。
-
-### 3. 建立结构化意图
-
-创建 `story/runtime/chapter-NNNN.intent.json`，以 `schemas/chapter-intent.schema.json` 为唯一字段定义。至少填写：戏剧问题、POV、时间架构、必要场景节点，以及起草后补入的 Evidence Map。信息、关系与跨章新意的完整推理可留在主代理工作笔记中；需要机器判定的增量可写 `knowledgeDeltas`、`relationshipDeltas`、`noveltyDelta`。
+创建 `story/runtime/chapter-NNNN.intent.json`，使用 `schemaVersion: 4.1`。时间必须拆为有序 segments；场景节点必须引用参与角色、时间段、使用的 fact ID 和关系 pair ID；跨章新意填写结构化 `noveltyFingerprint`。起草后补 Evidence Map。
 
 不要手写同名 Markdown。生成只读视图：
 
@@ -37,6 +31,12 @@ python scripts/render_intent.py <book-dir>/story/runtime/chapter-NNNN.intent.jso
 ```
 
 `book.json.chapterMinChars` 是书级硬下限，intent 只能提高规划目标，不能降低下限。场景节点只列真正必要的戏剧工作；`descriptionObligation` 写清描写承担的行动可读性、情绪外化、氛围压力、关系变化或信息呈现职责，不设固定感官数量。
+
+### 3. 重建有边界的主代理工作包
+
+intent 写入磁盘后运行 `python scripts/build_work_packet.py <book-dir> --chapter <NNNN>`。脚本从 intent、书级契约、最近正式章、摘要、焦点、钩子、相关状态和角色卡重建带源哈希的有限工作包。
+
+工作包只供主代理使用。对话已堆积多章全文、多个报告，或主代理不能逐项复述当前章硬约束时，立即从这些文件重新取数后再继续。intent 或任一来源改变后必须重建，不沿用旧包。
 
 ### 4. 主代理独立起草并冻结
 
@@ -60,7 +60,7 @@ python scripts/chapter_txn.py <book-dir> --chapter <NNNN> mark-drafted
 python scripts/chapter_txn.py <book-dir> --chapter <NNNN> gate
 ```
 
-脚本检查 schema、事务链、书级字符下限、占位符、节点—证据一一对应、段落范围、短引与草稿哈希。失败时先定位缺少的过程、转折、动机、动作可读性、关系后效或章际承接，只补这些叙事工作；禁止复述前情、重复心理、堆景物或同义改写凑字数。
+脚本检查 schema、事务链、书级字符下限、时间/事实/关系引用、节点证据，并自动生成与绑定近 10 章重复报告。任一失败不得进入审计。
 
 ### 6. 主代理知情审计
 
@@ -89,19 +89,19 @@ python scripts/build_cold_read_packet.py <book-dir> --final <上一章> --draft 
 冷读报告写回书目录后登记：
 
 ```bash
-python scripts/chapter_txn.py <book-dir> --chapter <NNNN> record-audit --kind cold --report story/runtime/chapter-NNNN.cold-audit.md --status pass
+python scripts/chapter_txn.py <book-dir> --chapter <NNNN> record-audit --kind cold --report story/runtime/chapter-NNNN.cold-audit.md --packet-manifest story/runtime/chapter-NNNN.cold-source.json --status pass
 ```
 
 两类审计都为 pass 后事务才进入 `audited`。冷读发现需要改正文时，由主代理修改并重新执行步骤 4–7；二审用另一个空上下文审计员，只给修改后的纯正文，不附一审报告。
 
 ### 8. 落盘、验证与封板
 
-1. 创建写入前快照。
+1. 创建写入前恢复点：`python scripts/snapshot_book.py <book-dir> --chapter <NNNN> --type prewrite`。
 2. 将已审计草稿按字节复制到唯一的 `chapters/NNNN_标题.md`。
 3. 更新摘要、故事时钟、事实获知链、关系许可、道具、钩子、焦点和 `book.json.updatedAt`；不得把下一章计划提前写成已发生事实。
 4. 运行 `python scripts/rebuild_index.py <book-dir>`，不得手填计数。
-5. 运行 `python scripts/check_chapter_overlap.py <book-dir> --chapter <NNNN>` 与 `python scripts/validate_book.py <book-dir>`。
-6. 创建章末快照。
+5. 运行 `python scripts/validate_book.py <book-dir>`；重复报告已经在 gate 中自动生成并绑定。
+6. 创建章末快照：`python scripts/snapshot_book.py <book-dir> --chapter <NNNN> --type closed`。
 7. 运行 `python scripts/chapter_txn.py <book-dir> --chapter <NNNN> close`。
 
 `close` 会重验草稿、正式稿、门禁报告、两份审计报告及其哈希，并执行全书验证；任一文件在登记后改变都拒绝封板。连续写作中途不询问合并审核，只在本轮最后一章 `closed` 后询问一次。

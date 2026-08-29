@@ -184,6 +184,19 @@ def check_chapters_continuity(book_dir: str, result: ValidationResult):
             result.add_warning(f"章节编号不连续，缺失：{sorted(missing)}")
 
 
+def check_foundation_ready(book_dir: str, result: ValidationResult):
+    """允许空项目保留骨架；一旦已有正文，核心基础文件不得仍是初始化占位。"""
+    if not glob.glob(os.path.join(book_dir, "chapters", "*.md")):
+        return
+    for rel in (
+        "story/author_intent.md", "story/book_rules.md",
+        "story/outline/story_frame.md", "story/outline/volume_map.md",
+    ):
+        text = read_file(book_dir, rel)
+        if "尚未填写" in text or "<待填>" in text:
+            result.add_error(f"已有章节时基础文件不得保留初始化占位：{rel}")
+
+
 def check_index_consistency(book_dir: str, result: ValidationResult):
     """检查 index 与文件一致性。"""
     index_path = os.path.join(book_dir, "chapters", "index.json")
@@ -199,9 +212,15 @@ def check_index_consistency(book_dir: str, result: ValidationResult):
 
     # 兼容新旧两种 index 格式：新版 {"chapters": [...]} 与旧版裸列表 [{...}]
     entries = index.get("chapters", []) if isinstance(index, dict) else index
+    if not isinstance(entries, list):
+        result.add_error("chapters/index.json 的 chapters 必须是数组")
+        return
     index_files = set()
     index_numbers = set()
     for entry in entries:
+        if not isinstance(entry, dict):
+            result.add_error("index 条目必须是对象")
+            continue
         f = entry.get("file", "")
         if not f:
             result.add_error("index 条目缺少 file")
@@ -342,9 +361,27 @@ def check_snapshot_manifests(book_dir: str, result: ValidationResult):
         except json.JSONDecodeError as e:
             result.add_error(f"快照 {name}/manifest.json 解析失败：{e}")
             continue
+        included = manifest.get("includedFiles")
+        hashes = manifest.get("fileHashes")
+        if manifest.get("snapshotVersion") == "2.0.0":
+            if not isinstance(included, list) or not included or not isinstance(hashes, dict):
+                result.add_error(f"快照 {name} 缺少非空 includedFiles/fileHashes")
+                continue
+            if set(included) != set(hashes):
+                result.add_error(f"快照 {name} 的 includedFiles 与 fileHashes 不一致")
+            body = dict(manifest)
+            body.pop("manifestSha256", None)
+            encoded = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            actual_manifest_hash = "sha256:" + hashlib.sha256(encoded).hexdigest()
+            if manifest.get("manifestSha256") != actual_manifest_hash:
+                result.add_error(f"快照 {name} manifest 自身哈希不匹配")
         # 验证哈希
-        for fpath, expected_hash in manifest.get("fileHashes", {}).items():
-            full = os.path.join(snap_path, fpath)
+        for fpath, expected_hash in (hashes or {}).items():
+            try:
+                full = safe_join(snap_path, fpath)
+            except ValueError:
+                result.add_error(f"快照 {name} 含越界路径：{fpath}")
+                continue
             if not os.path.isfile(full):
                 result.add_error(f"快照 {name} 缺少文件：{fpath}")
             else:
@@ -463,6 +500,9 @@ def check_word_count_consistency(book_dir: str, result: ValidationResult):
     except (json.JSONDecodeError, OSError):
         return
     entries = index.get("chapters", []) if isinstance(index, dict) else index
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) for entry in entries):
+        result.add_error("chapters/index.json 条目必须是对象数组")
+        return
     book_data = {}
     try:
         with open(os.path.join(book_dir, "book.json"), "r", encoding="utf-8") as f:
@@ -490,6 +530,10 @@ def check_word_count_consistency(book_dir: str, result: ValidationResult):
                 first = manifest.get("firstChapter")
                 last = manifest.get("lastChapter")
                 rows = manifest.get("files", [])
+                indexed_by_number = {
+                    entry.get("number"): entry.get("file")
+                    for entry in entries if isinstance(entry, dict)
+                }
                 if isinstance(first, int) and isinstance(last, int) and first > last:
                     result.add_error("import manifest.firstChapter 不得大于 lastChapter")
                 listed = []
@@ -497,6 +541,12 @@ def check_word_count_consistency(book_dir: str, result: ValidationResult):
                     chapter = row.get("chapter") if isinstance(row, dict) else None
                     rel_path = row.get("path", "") if isinstance(row, dict) else ""
                     listed.append(chapter)
+                    expected_file = indexed_by_number.get(chapter)
+                    expected_path = f"chapters/{expected_file}" if expected_file else ""
+                    if not expected_file or rel_path.replace("\\", "/") != expected_path:
+                        result.add_error(
+                            f"import manifest 第 {chapter} 章路径必须等于索引中的唯一正式稿 {expected_path or '<missing>'}"
+                        )
                     try:
                         source_path = safe_join(book_dir, rel_path)
                     except ValueError as exc:
@@ -511,6 +561,14 @@ def check_word_count_consistency(book_dir: str, result: ValidationResult):
                     if sorted(listed) != expected:
                         result.add_error(
                             "import manifest.files 必须恰好覆盖 firstChapter..lastChapter，且每章一条"
+                        )
+                    exempt_indexed = sorted(
+                        number for number in indexed_by_number
+                        if isinstance(number, int) and number < gate_from
+                    )
+                    if exempt_indexed != expected:
+                        result.add_error(
+                            "import manifest 必须覆盖索引中所有处于长度豁免区间的章节"
                         )
             except (OSError, json.JSONDecodeError) as exc:
                 result.add_error(f"import manifest 无法读取：{exc}")
@@ -571,16 +629,20 @@ def check_structured_runtime(book_dir: str, result: ValidationResult):
                     result.add_error(f"{os.path.basename(path)}：{message}")
             except (OSError, json.JSONDecodeError) as exc:
                 result.add_error(f"{os.path.basename(path)} 无法读取：{exc}")
-    from chapter_txn import verify_transaction
+    from chapter_txn import verify_closed_bindings, verify_transaction
     transactions = {}
     for path in glob.glob(os.path.join(runtime, "chapter-*.transaction.json")):
         try:
             with open(path, "r", encoding="utf-8") as handle:
                 txn = json.load(handle)
-            transactions[txn.get("chapter")] = txn
-            for message in verify_transaction(txn):
-                result.add_error(f"{os.path.basename(path)}：{message}")
+            match = re.search(r"chapter-(\d+)\.transaction\.json$", path)
+            file_chapter = int(match.group(1)) if match else None
             chapter = txn.get("chapter")
+            if chapter in transactions:
+                result.add_error(f"{os.path.basename(path)}：事务章号重复 {chapter}")
+            transactions[chapter] = txn
+            for message in verify_transaction(txn, file_chapter):
+                result.add_error(f"{os.path.basename(path)}：{message}")
             state = txn.get("state")
             draft = os.path.join(runtime, f"chapter-{chapter:04d}.draft.md") if isinstance(chapter, int) else ""
             if state in {"drafted", "gated", "audited", "closed"} and isinstance(chapter, int):
@@ -588,9 +650,15 @@ def check_structured_runtime(book_dir: str, result: ValidationResult):
                     result.add_error(f"{os.path.basename(path)}：draftSha256 与当前草稿不一致")
             if state in {"gated", "audited", "closed"} and isinstance(chapter, int):
                 gate = os.path.join(runtime, f"chapter-{chapter:04d}.gate.json")
+                overlap = os.path.join(runtime, f"chapter-{chapter:04d}.overlap.json")
+                intent = os.path.join(runtime, f"chapter-{chapter:04d}.intent.json")
                 event = next((row for row in reversed(txn.get("events", [])) if row.get("to") == "gated"), {})
                 if not os.path.isfile(gate) or event.get("gateReportSha256") != file_sha256(gate):
                     result.add_error(f"{os.path.basename(path)}：机械门禁报告缺失或哈希不匹配")
+                if not os.path.isfile(overlap) or event.get("overlapReportSha256") != file_sha256(overlap):
+                    result.add_error(f"{os.path.basename(path)}：跨章重复报告缺失或哈希不匹配")
+                if not os.path.isfile(intent) or event.get("intentSha256") != file_sha256(intent):
+                    result.add_error(f"{os.path.basename(path)}：intentSha256 与权威 intent 不一致")
             if state in {"audited", "closed"} and isinstance(chapter, int):
                 audit_manifest = os.path.join(runtime, f"chapter-{chapter:04d}.audit.json")
                 event = next((row for row in reversed(txn.get("events", [])) if row.get("to") == "audited"), {})
@@ -600,6 +668,9 @@ def check_structured_runtime(book_dir: str, result: ValidationResult):
                 finals = sorted(glob.glob(os.path.join(book_dir, "chapters", f"{chapter:04d}_*.md")))
                 if len(finals) != 1 or txn.get("finalSha256") != file_sha256(finals[0]):
                     result.add_error(f"{os.path.basename(path)}：finalSha256 与唯一正式稿不一致")
+            if state in {"closed", "legacy_closed", "imported_closed"} and isinstance(chapter, int):
+                for message in verify_closed_bindings(book_dir, chapter, txn):
+                    result.add_error(f"{os.path.basename(path)}：封板绑定无效：{message}")
         except (OSError, json.JSONDecodeError) as exc:
             result.add_error(f"{os.path.basename(path)} 无法读取：{exc}")
     for path in glob.glob(os.path.join(runtime, "chapter-*.audit.json")):
@@ -615,7 +686,10 @@ def check_structured_runtime(book_dir: str, result: ValidationResult):
             elif state in {"audited", "closed"}:
                 result.add_error(f"{os.path.basename(path)}：audited/closed 事务缺少两类审计记录")
             else:
-                allowed = {"schemaVersion", "chapter", "draftSha256", "informedAudit", "coldRead"}
+                allowed = {
+                    "schemaVersion", "chapter", "draftSha256", "intentSha256",
+                    "gateReportSha256", "overlapReportSha256", "informedAudit", "coldRead",
+                }
                 if set(audit) - allowed:
                     result.add_error(f"{os.path.basename(path)}：存在未知字段")
             if audit.get("draftSha256") != txn.get("draftSha256"):
@@ -696,7 +770,9 @@ def check_fact_evidence(book_dir: str, result: ValidationResult):
             with open(chap, "r", encoding="utf-8") as f:
                 chap_text = f.read()
             norm_ev = _norm_text(evidence)
-            if norm_ev and norm_ev not in _norm_text(chap_text):
+            if not norm_ev:
+                result.add_error(f"事实证据不得为空或仅含标点：{fact_id}")
+            elif norm_ev not in _norm_text(chap_text):
                 result.add_error(
                     f"事实证据引文在章节 {source_chapter} 正文未命中：{fact_id} "
                     f"evidence=「{evidence[:30]}」（引文应出自第 {source_chapter} 章正文）"
@@ -761,7 +837,9 @@ def check_knowledge_acquisition(book_dir: str, result: ValidationResult):
                     f"角色获知链不完整：{fact_id} 缺少 {', '.join(missing_values)}"
                 )
                 continue
-            if timeline_event_ids and event_id not in timeline_event_ids:
+            if not timeline_event_ids:
+                result.add_error("角色获知链存在事件引用，但故事时间轴为空")
+            elif event_id not in timeline_event_ids:
                 result.add_error(
                     f"角色获知链引用不存在的时间轴事件：{fact_id} "
                     f"knower={knower} acquisition_event_id={event_id}"
@@ -777,7 +855,9 @@ def check_knowledge_acquisition(book_dir: str, result: ValidationResult):
             with open(chap, "r", encoding="utf-8") as f:
                 chap_text = f.read()
             norm_ev = _norm_text(evidence)
-            if norm_ev and norm_ev not in _norm_text(chap_text):
+            if not norm_ev:
+                result.add_error(f"角色获知证据不得为空或仅含标点：{fact_id} knower={knower}")
+            elif norm_ev not in _norm_text(chap_text):
                 result.add_error(
                     f"角色获知证据在章节 {known_from} 正文未命中：{fact_id} "
                     f"knower={knower} acquisition_evidence=「{evidence[:30]}」"
@@ -828,7 +908,9 @@ def check_relationship_permissions(book_dir: str, result: ValidationResult):
             )
             continue
         event_id = row[idx["catalyst_event_id"]].strip()
-        if timeline_event_ids and event_id not in timeline_event_ids:
+        if not timeline_event_ids:
+            result.add_error("关系许可账本存在事件引用，但故事时间轴为空")
+        elif event_id not in timeline_event_ids:
             result.add_error(
                 f"关系许可账本引用不存在的时间轴事件：{pair_id} catalyst_event_id={event_id}"
             )
@@ -843,7 +925,10 @@ def check_relationship_permissions(book_dir: str, result: ValidationResult):
         evidence = row[idx["evidence"]].strip()
         with open(chap, "r", encoding="utf-8") as f:
             chapter_text = f.read()
-        if _norm_text(evidence) not in _norm_text(chapter_text):
+        normalized_evidence = _norm_text(evidence)
+        if not normalized_evidence:
+            result.add_error(f"关系变化证据不得为空或仅含标点：{pair_id}")
+        elif normalized_evidence not in _norm_text(chapter_text):
             result.add_error(
                 f"关系变化证据在章节 {chapter} 正文未命中：{pair_id} "
                 f"evidence=「{evidence[:30]}」"
@@ -1095,6 +1180,7 @@ def validate(book_dir: str) -> ValidationResult:
     check_missing_files(book_dir, result)
     check_book_json(book_dir, result)
     check_chapters_continuity(book_dir, result)
+    check_foundation_ready(book_dir, result)
     check_index_consistency(book_dir, result)
     check_markdown_table_columns(book_dir, result)
     check_fact_chapters(book_dir, result)

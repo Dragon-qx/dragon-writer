@@ -20,27 +20,25 @@ metadata:
 - **子代理只做无背景冷读**：只有草稿冻结并通过机械门禁与主代理知情审计后，才可启动一个全新的审计子代理。它只能报告读者可见问题，不得改正文；同一时刻最多一个，不得复用旧审计上下文。
 - **报告具体创建或变更了哪些文件**：不要声称某个章节或某本书"已经存在"，除非文件真的被写入了。
 
-## 自动更新（默认开启）
+## 更新（默认只读，不自动应用）
 
-`_meta.json` 默认 `update.auto_check=true`：skill 启动时自动联网检查远程版本，有新版本即下载并应用；无新版本静默通过；任何网络错误 / API 不可达 / 下载失败均**自动跳过**（`skip_on_error=true`），不中断 skill 运行。更新只替换 skill 文件本身，本地 `_meta.json` 的 `update` 配置会被保留。
+`_meta.json` 默认 `update.auto_check=false`。普通写作不联网、不下载、不替换 skill；需要时可只读查询版本，应用更新必须由用户明确要求。
 
 ```bash
-python scripts/auto_update.py check              # 启动期检查并应用更新（有新版本即更新）
 python scripts/auto_update.py status --verbose   # 只查远程版本，不下载
-python scripts/auto_update.py check --force      # auto_check=false 时强制检查（错误自动跳过）
+python scripts/auto_update.py check --force      # 用户明确要求更新时才检查并应用
 ```
 
-- `check` 有新版本时脚本自动下载并应用，打印 `已更新到版本 x.y.z`。
-- 无新版本 / 已是最新时静默通过。
-- 任何网络错误、API 不可达、下载失败均**自动跳过**（`skip_on_error=true`），不中断 skill 运行。
+- `status` 不修改本地文件。
+- `check --force` 会修改 skill，只能在用户明确授权更新时运行。
+- 下载包应用前仍须通过 git 工作树保护；更新不是写作流程的启动步骤。
 
 版本号规则：语义化版本 `x.y.z`（如 `3.2.0`）。本地版本 < 远程版本才执行更新；本地无 `_meta.json` 或无 `version` 字段视为需要更新。远程版本来源：`https://api.skillhub.cn/api/v1/search?q=d-writer`（slug=`d-writer`）。
 
-> **关闭启动期自动检查**：编辑 `_meta.json` → `update.auto_check: false`。**完全禁用更新**：`update.enabled: false`。
+> **完全禁用更新能力**：编辑 `_meta.json` → `update.enabled: false`。
 
 ## 从这里开始
 
-0. **检查更新（默认开启）**：运行 `python scripts/auto_update.py check`——有新版本自动应用，无新版本静默通过，任何错误自动跳过不中断（见上方「自动更新」）。
 1. **识别模式**：
    - **模式 A · 新书**：用户给了一句灵感、书名、题材，或要求写一本新小说 → 读 `references/workflow-new-book.md`。
    - **模式 B · 续写**：存在大纲 / 设定 / 章节 / 状态文件 → 读 `references/workflow-continue.md`。
@@ -52,11 +50,11 @@ python scripts/auto_update.py check --force      # auto_check=false 时强制检
 2. 动任何文件之前先读 `references/file-contract.md`（文件职责、兼容命名、权威顺序、Foundation / Runtime 边界）。
 3. 新书或基础文件缺失时读 `references/templates.md`（全部基础文件模板）。
 4. **续写或改写章节正文前**读 `references/chapter-craft.md`（戏剧单元、叙事时间压缩、信息 / 关系权限、章首入戏与断章技法）。
-5. 章节质量门禁细节读 `references/audit-dimensions.md`（知情连续性维度、无背景冷读维度、技法适配、结果四态）。
+5. 续写、改写、导入或回滚前读 `references/chapter-protocol.md`；质量维度再读 `references/audit-dimensions.md`。
 
 ## 章节串行事务与三道质量门
 
-每章都是一个不可并行、哈希绑定的事务：`prepared → drafted → gated → audited → closed`。状态只允许由 `scripts/chapter_txn.py` 推进，不手改 Markdown 状态；草稿、门禁报告、两类审计报告和最终正文均以 SHA-256 绑定。只有 `closed` 后才能准备下一章；长上下文不是启动更多写手的理由，应清空非必要上下文并从文件重新组装本章工作包。
+每章都是一个不可并行、哈希绑定的事务：`prepared → drafted → gated → audited → closed`。状态只允许由 `scripts/chapter_txn.py` 推进；intent、草稿、字数契约、重复报告、两类审计、正式稿、状态账本、索引与章末快照均绑定到事件。只有完整 `closed` 才能准备下一章。长上下文时运行 `build_work_packet.py` 从磁盘重建当前章包，不增加写手。
 
 **三道门为强制环节，任何写作任务都不得跳过**：
 - **机械门禁**：用统一字符算法检查硬字数下限，并核验 intent 中每个必要场景节点都存在正文证据；未通过不得启动冷读、落正文或更新索引。

@@ -27,19 +27,20 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 | 模式 | 触发时机 | 做什么 |
 | --- | --- | --- |
 | **A · 新书** | 一句灵感 / 书名 / 题材 | 建目录、一口气产出全部基础文件骨架（意图 / 故事框架 / 卷纲 / 角色 / 规则 / 状态 / 钩子） |
-| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（12 项驻场初筛 + 43 个候选深化审计维度 · 审-改循环） → 落盘 |
+| **B · 续写** | 书已存在，往下写 | 重建工作包 → 4.1 章节意图 → 起草 → **三道质量门禁**（机械 + 知情 + 无背景冷读）→ 封板 |
 | **C · 导入** | 手里有旧章节，缺状态文件 | 从旧章反推基础文件，回放导入章节，续写 |
 | **D · 转向** | "换方向 / 下一章写 X" | 轻量调 `current_focus.md`，不改整份大纲 |
-| **E · 改写 / 修复** | 重写某一章 | **三步回滚机械**：恢复快照 → 清后续产物 → 重写 → 再走双层质检 |
+| **E · 改写 / 修复** | 重写某一章 | 规划回滚 → recovery → 归档后续产物 → 串行重写 → 再走三道门禁 |
 | **F · 仪表盘** | 看进度 / 关系 / 读章节 | 确保书文件夹下有模板，**双击 HTML 打开**，权限仍有效时自动重连（不承诺永久零交互） |
 | **G · 合并审核** | 写完一章 / 连续写完多章后 | 一个空上下文冷读子代理只审选定正文的读者体感；主代理另行核对隐藏连续性事实并留痕 |
 
-### 双层质量门禁
+### 三道质量门禁
 
-写一章不是写完就定稿，而是过两层：
+写一章不是写完就定稿，而是依次通过三道门：
 
-1. **驻场初筛（12 点）**——主角是否按动机行动、角色信息是否有获知路径、初识关系是否越级熟悉、章节是否机械覆盖一天、是否与近章语义重演，以及空间 / 道具 / 常识 / 章间物理状态是否连续。
-2. **43 个候选深化审计维度连续审计 + 审-改循环**——按章节风险和叙事需要适配维度清单；题材只影响技法选择，不限制创作范围。逐维出报告 → 修订 → **回头从第 1 维再过一遍**（防修 A 打坏 B） → 留痕审计漂移。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
+1. **机械门**——字数、Schema、时间/事实/关系引用、场景证据和近章文本重复。
+2. **主代理知情门**——用完整项目状态检查连续性、语义重复和隐藏事实。
+3. **无背景冷读门**——一个全新审计子代理只读显式正文包，只报告读者可见问题。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
 
 ### 写作仪表盘（双击即用）
 
@@ -84,6 +85,7 @@ dragon-writer/
     workflow-rewrite.md            # 模式 E：改写 / 修复
     workflow-dashboard.md          # 模式 F：仪表盘
     workflow-combined-audit.md     # 模式 G：合并审核
+    chapter-protocol.md            # 单章事务、冷读隔离、快照与回滚的唯一高风险协议
   assets/
     dashboard.html                 # 运行时仪表盘模板（零嵌入数据，构建产物）
     book-template/                 # 新书空白模板（init_book 只复制这一份）
@@ -92,6 +94,7 @@ dragon-writer/
     chapter-intent.schema.json     # 章节意图机器契约
     chapter-transaction.schema.json # 哈希事务状态
     chapter-audit.schema.json      # 审计报告绑定清单
+    cold-read-source.schema.json   # 纯正文冷读包来源与拼包哈希契约
     import-manifest.schema.json    # 导入历史豁免清单
   scripts/
     _contract.py                   # 共享契约加载器（canonical/aliases/字数/哈希）
@@ -103,6 +106,7 @@ dragon-writer/
     validate_book.py               # 验证书籍完整性（账本一致性机器检查）
     check_chapter_draft.py          # 章节串行锁、硬字符下限与场景证据门禁
     build_cold_read_packet.py       # 只从正文构造无背景冷读包
+    build_work_packet.py            # 长上下文时从磁盘重建当前章有限工作包
     check_chapter_overlap.py       # 当前章与近章的整章 / 段落近似文本检查
     rebuild_index.py               # 重建章节 index（真实字数）
     snapshot_book.py               # 创建 / 验证快照
@@ -241,16 +245,16 @@ xdg-open books/<book-id>/dashboard.html    # Linux
 | 仪表盘模板 | [assets/dashboard.html](assets/dashboard.html) |
 | 仪表盘总览标签截图 | [references/tab-overview.png](references/tab-overview.png) |
 
-### 自动更新
+### 显式更新
 
-Skill 启动时自动检查更新（静默，错误自动跳过）：
+普通写作不自动联网或替换 Skill。需要时先只读查询；只有用户明确要求才应用更新：
 
 ```bash
-# 检查更新（静默模式，启动时调用）
-python scripts/auto_update.py check
-
 # 查看版本状态
 python scripts/auto_update.py status --verbose
+
+# 用户明确授权后检查并应用
+python scripts/auto_update.py check --force
 ```
 
 版本控制逻辑：

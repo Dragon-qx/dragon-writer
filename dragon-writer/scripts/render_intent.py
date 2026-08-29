@@ -35,7 +35,14 @@ def render(source: str, output: str) -> None:
         "",
     ]
     for key, value in data["timeArchitecture"].items():
-        lines.append(f"- {key}: {value}")
+        if key != "segments":
+            lines.append(f"- {key}: {value}")
+    for segment in data["timeArchitecture"].get("segments", []):
+        lines.append(
+            f"- segment {_cell(segment['segmentId'])} [{_cell(segment['mode'])}] "
+            f"order={segment['order']}: {_cell(segment['start'])} → {_cell(segment['end'])}; "
+            f"purpose={_cell(segment['purpose'])}"
+        )
     lines += ["", "## Knowledge Permissions", ""]
     for item in data["knowledgePermissions"]:
         lines.append(
@@ -55,16 +62,21 @@ def render(source: str, output: str) -> None:
             f"catalyst={_cell(item['catalystEventId'])}; aftermath={_cell(item['aftermath'])}"
         )
     lines += ["", "## Novelty Delta", "", _cell(data["noveltyDelta"])]
+    if data.get("noveltyFingerprint"):
+        lines += ["", "```json", json.dumps(data["noveltyFingerprint"], ensure_ascii=False, indent=2), "```"]
     lines += [
         "", "## Required Scene Beats", "",
-        "| beat_id | mode | dramatic_function | goal_or_pressure | conflict_or_turn | required_result | time_space_anchor | description_obligation |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| beat_id | mode | participants | time_segment | dramatic_function | goal_or_pressure | conflict_or_turn | required_result | time_space_anchor | description_obligation |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for beat in data["sceneBeats"]:
-        lines.append("| " + " | ".join(_cell(beat[key]) for key in (
-            "beatId", "mode", "dramaticFunction", "goalOrPressure", "conflictOrTurn",
-            "requiredResult", "timeSpaceAnchor", "descriptionObligation"
-        )) + " |")
+        values = [
+            beat["beatId"], beat["mode"], ", ".join(beat.get("participants", [])),
+            beat.get("timeSegmentId", ""), beat["dramaticFunction"], beat["goalOrPressure"],
+            beat["conflictOrTurn"], beat["requiredResult"], beat["timeSpaceAnchor"],
+            beat["descriptionObligation"],
+        ]
+        lines.append("| " + " | ".join(_cell(value) for value in values) + " |")
     lines += ["", "## Draft Evidence Map", "", "| beat_id | paragraph_refs | evidence_quote | status |", "| --- | --- | --- | --- |"]
     for item in data["evidence"]:
         lines.append(

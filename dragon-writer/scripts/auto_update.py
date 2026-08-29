@@ -202,6 +202,11 @@ def _try_direct_download(slug: str, install_dir: Path, remote_version: str) -> b
 
             # 解压
             with zipfile.ZipFile(zip_path, "r") as zf:
+                stage_root = stage_dir.resolve()
+                for member in zf.infolist():
+                    target = (stage_dir / member.filename).resolve()
+                    if target != stage_root and stage_root not in target.parents:
+                        raise ValueError(f"更新包含越界路径：{member.filename}")
                 zf.extractall(stage_dir)
 
             # 移动到安装目录（保留 _meta.json 中的本地配置）

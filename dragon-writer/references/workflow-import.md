@@ -24,7 +24,7 @@
    - 推断风格指南
    - 在 `book.json` 明确后续章节的 `chapterMinChars` / `chapterTargetChars` / `chapterMaxChars`，并将 `chapterLengthGateFromChapter` 设为“最后一个导入章 + 1”；历史原稿可以保留原长度，之后新写章节必须过硬门禁
    - 创建 `story/import-manifest.json`：逐章记录 chapter、相对路径与实际 SHA-256，并确保 `firstChapter..lastChapter` 每章恰好一条。验证器只有在清单完整、哈希未变且 `chapterLengthGateFromChapter == lastChapter + 1` 时才承认历史长度豁免
-   - 运行 `python scripts/migrate_3_13_to_4_0.py <book-dir>` 建立 `legacy_closed` 历史事务。它不倒填不存在的写作计划、Evidence Map 或审计结果；旧资料不足时保留 Markdown 并要求后续人工建立新章 JSON intent
+   - 先运行 `python scripts/migrate_3_13_to_4_0.py <book-dir>` 查看计划，用户确认后加 `--execute`。只有路径、索引、唯一正式稿和哈希全部匹配 import manifest 的连续历史章才建立 `imported_closed`；不倒填历史审计或写作计划
 6. **从第一个未写章节起按模式 B 续写**（详见 `references/workflow-continue.md`）。
 
 ## 相关文档
@@ -33,3 +33,4 @@
 - 模式 B（续写）：`references/workflow-continue.md`
 - 文件职责与兼容命名：`references/file-contract.md`
 - 基础文件模板：`references/templates.md`
+- 3.x intent 迁移格式：`references/legacy-migration.md`（仅迁移时读取）

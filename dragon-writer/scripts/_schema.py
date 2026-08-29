@@ -14,11 +14,34 @@ from typing import Any, Dict, List
 SKILL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_DIR = os.path.join(SKILL_ROOT, "schemas")
 
+SUPPORTED_KEYWORDS = {
+    "$schema", "$id", "$ref", "$defs", "title", "description", "default", "examples",
+    "type", "required", "properties", "additionalProperties", "const", "enum",
+    "minLength", "pattern", "minimum", "items", "minItems", "uniqueItems",
+}
+
 
 def load_schema(name: str) -> dict:
     path = os.path.join(SCHEMA_DIR, name)
     with open(path, "r", encoding="utf-8") as handle:
-        return json.load(handle)
+        schema = json.load(handle)
+    _check_schema_keywords(schema)
+    return schema
+
+
+def _check_schema_keywords(node: Any, path: str = "$") -> None:
+    """对未实现的约束 fail closed，避免 Schema 看似生效、实际被静默忽略。"""
+    if not isinstance(node, dict):
+        return
+    unknown = sorted(set(node) - SUPPORTED_KEYWORDS)
+    if unknown:
+        raise ValueError(f"{path} 含校验器不支持的 JSON Schema 关键字：{', '.join(unknown)}")
+    for key, value in node.get("properties", {}).items():
+        _check_schema_keywords(value, f"{path}.properties.{key}")
+    if isinstance(node.get("items"), dict):
+        _check_schema_keywords(node["items"], f"{path}.items")
+    for key, value in node.get("$defs", {}).items():
+        _check_schema_keywords(value, f"{path}.$defs.{key}")
 
 
 def _resolve_ref(root: dict, ref: str) -> dict:

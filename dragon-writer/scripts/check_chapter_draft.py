@@ -188,34 +188,89 @@ def _ref_range(value: str) -> Optional[Tuple[int, int]]:
     return (start, end) if start <= end else None
 
 
+def _check_v41_semantics(intent: dict, result: GateResult) -> None:
+    """JSON Schema 管形状；这里核验跨字段的时间、信息和关系引用。"""
+    if intent.get("schemaVersion") != "4.1":
+        result.warnings.append("当前 intent 为 4.0 兼容格式；新章应迁移到 4.1 语义契约")
+        return
+    segments = intent.get("timeArchitecture", {}).get("segments", [])
+    if not segments:
+        result.errors.append("4.1 intent 必须提供 timeArchitecture.segments")
+    segment_ids = [row.get("segmentId", "") for row in segments]
+    orders = [row.get("order") for row in segments]
+    if len(segment_ids) != len(set(segment_ids)):
+        result.errors.append("timeArchitecture.segmentId 必须唯一")
+    if any(not isinstance(value, int) for value in orders) or orders != sorted(set(orders)):
+        result.errors.append("timeArchitecture.segments.order 必须严格递增且唯一")
+    for row in segments:
+        if row.get("mode") in {"summary", "ellipsis", "transition"} and not row.get("cutReason"):
+            result.errors.append(f"时间段 {row.get('segmentId')} 的压缩/跳时必须说明 cutReason")
+    if not intent.get("noveltyFingerprint"):
+        result.errors.append("4.1 intent 必须填写结构化 noveltyFingerprint")
+
+    holders = {}
+    for permission in intent.get("knowledgePermissions", []):
+        character_id = permission.get("characterId", "")
+        if not character_id:
+            result.errors.append(f"信息权限 {permission.get('character', '<unknown>')} 缺少 characterId")
+            continue
+        facts = set(permission.get("knownFactIds", []))
+        for acquired in permission.get("acquiredThisChapter", []):
+            fact_id = acquired.get("factId", "")
+            if not fact_id:
+                result.errors.append(f"{character_id} 的本章获知项缺少 factId")
+            else:
+                facts.add(fact_id)
+        holders[character_id] = facts
+
+    relation_pairs = {}
+    for permission in intent.get("relationshipPermissions", []):
+        pair_id = permission.get("pairId", "")
+        participants = permission.get("participants", [])
+        if len(participants) != 2:
+            result.errors.append(f"关系权限 {pair_id or '<empty>'} 必须明确两个参与角色")
+        relation_pairs[pair_id] = set(participants)
+
+    for beat in intent.get("sceneBeats", []):
+        beat_id = beat.get("beatId", "<empty>")
+        participants = beat.get("participants", [])
+        if not participants:
+            result.errors.append(f"场景节点 {beat_id} 缺少 participants")
+        if beat.get("timeSegmentId") not in set(segment_ids):
+            result.errors.append(f"场景节点 {beat_id} 引用了不存在的 timeSegmentId")
+        for use in beat.get("knowledgeUses", []):
+            character_id = use.get("characterId", "")
+            fact_id = use.get("factId", "")
+            if character_id not in participants:
+                result.errors.append(f"场景节点 {beat_id} 的信息使用者 {character_id} 不在参与角色中")
+            if fact_id not in holders.get(character_id, set()):
+                result.errors.append(
+                    f"场景节点 {beat_id}：{character_id} 使用了未获知事实 {fact_id}"
+                )
+        refs = beat.get("relationshipRefs", [])
+        if len(participants) > 1 and not refs:
+            result.errors.append(f"多人场景节点 {beat_id} 必须引用关系权限")
+        for pair_id in refs:
+            if pair_id not in relation_pairs:
+                result.errors.append(f"场景节点 {beat_id} 引用了不存在的关系权限 {pair_id}")
+            elif not relation_pairs[pair_id].issubset(set(participants)):
+                result.errors.append(f"场景节点 {beat_id} 的关系 {pair_id} 角色不在该场景参与者中")
+
+
 def _check_previous_lock(book_dir: str, chapter: int, result: GateResult) -> None:
     if chapter <= 1:
         return
-    from chapter_txn import load_transaction, verify_transaction
+    from chapter_txn import load_transaction, verify_closed_bindings
 
     previous_txn = load_transaction(book_dir, chapter - 1)
     if previous_txn:
-        errors = verify_transaction(previous_txn)
+        errors = verify_closed_bindings(book_dir, chapter - 1, previous_txn)
         if errors:
-            result.errors.append("上一章事务链无效：" + "; ".join(errors))
-        elif previous_txn.get("state") not in {"closed", "legacy_closed"}:
-            result.errors.append(
-                f"上一章尚未封板：第 {chapter - 1} 章 transaction_state="
-                f"{previous_txn.get('state', 'missing')}，必须为 closed"
-            )
+            result.errors.append("上一章没有完整封板：" + "; ".join(errors))
         return
-    previous = _intent_path(book_dir, chapter - 1)
-    if not previous:
-        result.errors.append(
-            f"上一章缺少事务 intent：chapter-{chapter - 1:04d}.intent.md；"
-            "先为历史章节补建 closed 迁移记录，禁止直接开始后章"
-        )
-        return
-    state = _scalar(_read(previous), "transaction_state")
-    if state != "closed":
-        result.errors.append(
-            f"上一章尚未封板：第 {chapter - 1} 章 transaction_state={state or 'missing'}，必须为 closed"
-        )
+    result.errors.append(
+        f"上一章缺少结构化 transaction.json；先迁移并建立可验证封板，禁止直接开始第 {chapter} 章"
+    )
 
 
 def check_draft(book_dir: str, chapter: int, draft: Optional[str] = None) -> GateResult:
@@ -236,6 +291,7 @@ def check_draft(book_dir: str, chapter: int, draft: Optional[str] = None) -> Gat
             "intent JSON：" + message
             for message in validate_document(intent_data, "chapter-intent.schema.json")
         )
+        _check_v41_semantics(intent_data, result)
         placeholders = _placeholder_paths(intent_data)
         if placeholders:
             result.errors.append("intent JSON 仍含占位内容：" + ", ".join(placeholders))

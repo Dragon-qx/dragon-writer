@@ -181,13 +181,13 @@ books/<book-id>/
 
 每章落盘必须遵循**事务式流程**，避免"章节正文成功但 state/hooks/index 只更新一部分"：
 
-1. **前置锁**：运行 `check_chapter_draft.py --preflight` 与 `chapter_txn.py ... prepare`；上一章结构化事务必须为 `closed` / `legacy_closed`。
+1. **前置锁**：运行 `check_chapter_draft.py --preflight` 与 `chapter_txn.py ... prepare`；上一章必须通过完整 `closed` 重验，或是 import manifest 精确绑定的 `imported_closed`。
 2. **主代理起草**：只由主代理写 `runtime/chapter-NNNN.draft.md`，运行 `chapter_txn.py ... mark-drafted` 锁定哈希；禁止任何子代理写作或并行处理后章。
-3. **机械门禁**：在权威 intent JSON 填写与当前草稿哈希绑定的 Evidence Map，重新生成只读 Markdown，再运行 `chapter_txn.py ... gate`。
+3. **机械门禁**：在 4.1 intent JSON 填写时间段、事实/关系引用、情节指纹与当前草稿 Evidence Map，重新生成只读 Markdown，再运行 `chapter_txn.py ... gate`；重复报告自动生成并绑定。
 4. **知情与冷读门禁**：主代理核对隐藏连续性事实；之后最多一个空上下文子代理只读显式稿源构建的正文包。两份 Markdown 报告通过 `record-audit` 登记路径与哈希；任何正文修改都须 `reopen` 并重跑。
-5. **创建恢复点**：写正式文件前创建旧状态快照（`snapshots/<NNNN-1>/`）。
+5. **创建恢复点**：写正式文件前创建 `prewrite-NNNN` 快照。
 6. **按序写入**：正文 → index → 摘要 → 状态 → 钩子 → `book.json`（status / updatedAt）→ intent 实际偏离。**wordCount 禁手写**，必须由 `python scripts/rebuild_index.py <book-dir>` 生成。
-7. **一致性验证**：运行近似文本检查与 `python scripts/validate_book.py <book-dir>`。FAIL 则回到草稿修复，不能靠留 warning 封板。
+7. **一致性验证**：运行 `python scripts/validate_book.py <book-dir>`。近似文本已由 gate 自动检查；FAIL 则回到草稿修复。
 8. **章末快照与封板**：创建 `snapshots/<NNNN>/`，运行 `chapter_txn.py ... close`；脚本重验全书、正式稿及所有登记哈希，之后才可准备下一章。
 9. **失败处理**：任一步失败时保留草稿，并报告失败文件与恢复方式；禁止补水凑字数或绕过状态锁。
 
@@ -230,17 +230,21 @@ books/<book-id>/
 | 字段 | 含义 |
 | --- | --- |
 | `snapshotVersion` | 快照格式版本号 |
+| `snapshotType` | `prewrite` / `closed` / `recovery`；封板与回滚只接受 `closed` |
 | `chapter` | 对应章节编号 |
 | `createdAt` | 创建时间（ISO 8601） |
 | `includedFiles` | 包含的文件清单 |
 | `fileHashes` | 文件哈希映射（path → sha256） |
 | `skillVersion` | 生成快照的 skill 版本 |
 | `schemaVersion` | 书籍 schema 版本 |
+| `manifestSha256` | 排除本字段后对规范化 manifest 计算的 SHA-256 自哈希 |
 
 ### 安全规则
 
 - **禁止静默覆盖**：已有快照存在时，不自动覆盖，必须显式确认。
+- **非空与自绑定**：当前协议快照必须有非空且集合一致的 `includedFiles/fileHashes`，并通过 manifest 自哈希。
 - **恢复提示**：为缺失或哈希不匹配的快照提供恢复提示（列出缺失文件、哈希差异）。
+- **回滚类型**：只允许从当前协议的 `closed` 快照回滚；先建 recovery，后续产物移入归档而非删除。
 - **glob 一致性**：快照写入（`snapshot_book`）与回滚恢复点收集（`rollback_book`）必须共用 `_contract.resolve_snapshot_files()` 的展开逻辑，禁止各自硬编码路径集。
 
 ---
@@ -251,7 +255,7 @@ books/<book-id>/
 
 JSON Schema 是结构化 JSON 的机器可验证字段契约：规定必填字段、类型、枚举、格式、未知字段策略和版本。它只约束需要确定性门禁的少量事实，不约束题材，也不承载正文、自由写作说明或文学判断。
 
-4.0 采用“一个语义一个权威源”：intent / transaction / audit manifest 以 JSON 为权威；同名 Markdown 只能由 renderer 单向生成。schema 文件本身是字段定义，脚本通过共享验证器读取它们，文档只解释用途，不复制另一套可执行规则。每个 JSON 写 `schemaVersion`，每个生成视图写源 SHA-256；CI / `validate_book.py` 同时校验 schema、事件链和视图新鲜度。因此 MD 与 JSON 不做双向同步：若冲突，生成视图被判过期并重建，绝不让人手选择哪份是真的。
+4.1 采用“一个语义一个权威源”：intent / transaction / audit manifest 以 JSON 为权威；同名 Markdown 只能由 renderer 单向生成。schema 文件本身是字段定义，脚本通过共享验证器读取它们，文档只解释用途，不复制另一套可执行规则。每个 JSON 写 `schemaVersion`，每个生成视图写源 SHA-256；CI / `validate_book.py` 同时校验 schema、事件链和视图新鲜度。因此 MD 与 JSON 不做双向同步：若冲突，生成视图被判过期并重建，绝不让人手选择哪份是真的。
 
 旧版手写 Markdown intent 不自动冒充 4.0 JSON。迁移脚本只转换能无损提取且有真实正文证据的字段；缺失内容保留 legacy 文件并报告人工补录，不推断、不倒填历史审计。
 

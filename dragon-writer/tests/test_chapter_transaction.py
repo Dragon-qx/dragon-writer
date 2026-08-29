@@ -9,7 +9,9 @@ import sys
 SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "scripts")
 sys.path.insert(0, SCRIPTS_DIR)
 
-from build_cold_read_packet import build_packet  # noqa: E402
+from build_cold_read_packet import build_explicit_packet  # noqa: E402
+from chapter_txn import _append_event, _atomic_json  # noqa: E402
+from _contract import file_sha256  # noqa: E402
 from check_chapter_draft import check_draft, check_preflight  # noqa: E402
 from init_book import create_book  # noqa: E402
 
@@ -99,7 +101,7 @@ def test_next_chapter_requires_previous_closed(tmp_path):
     _write_chapter(book, 2, body, _intent(state="drafted"))
     result = check_draft(str(book), 2)
     assert not result.ok
-    assert any("上一章尚未封板" in message for message in result.errors)
+    assert any("缺少结构化 transaction.json" in message for message in result.errors)
 
 
 def test_preflight_blocks_creating_next_chapter_before_close(tmp_path):
@@ -108,11 +110,14 @@ def test_preflight_blocks_creating_next_chapter_before_close(tmp_path):
     _write_chapter(book, 1, body, _intent(state="audited"))
     result = check_preflight(str(book), 2)
     assert not result.ok
-    assert any("上一章尚未封板" in message for message in result.errors)
+    assert any("缺少结构化 transaction.json" in message for message in result.errors)
 
 
 def test_cold_read_packet_contains_only_prompt_and_manuscript(tmp_path):
     book = _book(tmp_path)
+    book_json = json.loads((book / "book.json").read_text(encoding="utf-8"))
+    book_json["chapterLengthGateFromChapter"] = 2
+    (book / "book.json").write_text(json.dumps(book_json, ensure_ascii=False), encoding="utf-8")
     manuscript = "# 章节\n\n这是读者能看到的正文。"
     (book / "chapters" / "0001_章节.md").write_text(manuscript, encoding="utf-8")
     (book / "story" / "current_state.md").write_text(
@@ -122,7 +127,27 @@ def test_cold_read_packet_contains_only_prompt_and_manuscript(tmp_path):
         "作者要求：审计时重点检查关系跳级。", encoding="utf-8"
     )
 
-    packet = build_packet(str(book), [1], prefer_draft=False)
+    final = book / "chapters" / "0001_章节.md"
+    txn = {
+        "schemaVersion": "4.0", "chapter": 1, "state": "", "events": [],
+        "legacyMigration": True,
+        "legacySourcePath": "chapters/0001_章节.md",
+        "legacySourceSha256": file_sha256(str(final)),
+        "assuranceLevel": "source-hash-only",
+    }
+    _append_event(txn, "imported_closed")
+    _atomic_json(str(book / "story" / "runtime" / "chapter-0001.transaction.json"), txn)
+    (book / "story" / "import-manifest.json").write_text(json.dumps({
+        "schemaVersion": "4.0", "firstChapter": 1, "lastChapter": 1,
+        "files": [{
+            "chapter": 1, "path": "chapters/0001_章节.md",
+            "sha256": file_sha256(str(final)),
+        }],
+    }, ensure_ascii=False), encoding="utf-8")
+    (book / "chapters" / "index.json").write_text(json.dumps({
+        "chapters": [{"number": 1, "file": "0001_章节.md", "wordCount": 1}],
+    }, ensure_ascii=False), encoding="utf-8")
+    packet, _ = build_explicit_packet(str(book), final_chapters=[1])
     assert "这是读者能看到的正文" in packet
     assert "主角其实来自未来" not in packet
     assert "重点检查关系跳级" not in packet

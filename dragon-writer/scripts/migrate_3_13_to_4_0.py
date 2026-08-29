@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""把 3.13 章节运行态迁移到 4.0，保留旧 Markdown，不伪造历史审计。
+"""把 3.13 章节运行态迁移到 4.x，保留旧 Markdown，不伪造历史审计。
 
-已封板历史章只建立 legacy_closed 事务。只有旧 intent 本身含完整场景表时才
-转换结构化 intent；缺失计划不会被反向编造。
+历史章只有被 import-manifest 精确绑定时才建立 imported_closed 事务。
 """
 
 import argparse
@@ -138,10 +137,23 @@ def migrate_transaction(book_dir: str, path: str) -> None:
         return
     state = _scalar(open(path, encoding="utf-8").read(), "transaction_state")
     txn = {"schemaVersion": "4.0", "chapter": chapter, "state": "", "events": [], "legacyMigration": True}
-    if state == "closed":
-        _append_event(txn, "legacy_closed", note="3.13 历史封板；未伪造机械门禁或冷读记录")
+    source = _source_manuscript(book_dir, chapter)
+    bound = None
+    manifest_path = os.path.join(book_dir, "story", "import-manifest.json")
+    if source and os.path.isfile(manifest_path):
+        manifest = json.load(open(manifest_path, encoding="utf-8"))
+        rel = os.path.relpath(source, book_dir).replace(os.sep, "/")
+        rows = [row for row in manifest.get("files", []) if row.get("chapter") == chapter]
+        if len(rows) == 1 and rows[0].get("path") == rel and rows[0].get("sha256") == file_sha256(source):
+            bound = (rel, rows[0]["sha256"])
+    if state == "closed" and bound:
+        txn.update({
+            "legacySourcePath": bound[0], "legacySourceSha256": bound[1],
+            "assuranceLevel": "source-hash-only",
+        })
+        _append_event(txn, "imported_closed", note="历史正式稿由 import manifest 精确绑定；未伪造历史审计")
     else:
-        _append_event(txn, "prepared", note=f"从 3.13 状态 {state or 'missing'} 迁移；须重新完成 4.0 门禁")
+        _append_event(txn, "prepared", note=f"旧状态 {state or 'missing'} 缺少可信导入绑定；须重新完成 4.x 门禁")
     _atomic_json(target, txn)
 
 
@@ -155,9 +167,15 @@ def migrate(book_dir: str) -> list:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="迁移 Dragon Writer 3.13 运行态到 4.0")
+    parser = argparse.ArgumentParser(description="迁移 Dragon Writer 3.13 运行态到 4.x")
     parser.add_argument("book_dir")
+    parser.add_argument("--execute", action="store_true", help="实际写入；默认只展示将处理的旧 intent")
     args = parser.parse_args()
+    if not args.execute:
+        runtime = os.path.join(args.book_dir, "story", "runtime")
+        candidates = sorted(glob.glob(os.path.join(runtime, "chapter-*.intent.md")))
+        print(json.dumps({"ok": True, "dryRun": True, "candidates": candidates}, ensure_ascii=False, indent=2))
+        return
     warnings = migrate(args.book_dir)
     print(json.dumps({"ok": True, "warnings": warnings}, ensure_ascii=False, indent=2))
 

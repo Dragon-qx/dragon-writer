@@ -6,12 +6,15 @@
   "required": ["schemaVersion", "chapter", "state", "events"],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": {"const": "4.0"},
+    "schemaVersion": {"enum": ["4.0", "4.1"]},
     "chapter": {"type": "integer", "minimum": 1},
-    "state": {"enum": ["prepared", "drafted", "gated", "audited", "closed", "reopened", "legacy_closed"]},
+    "state": {"enum": ["prepared", "drafted", "gated", "audited", "closed", "reopened", "legacy_closed", "imported_closed"]},
     "draftSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "finalSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "legacyMigration": {"type": "boolean"},
+    "legacySourcePath": {"type": "string", "minLength": 1},
+    "legacySourceSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "assuranceLevel": {"type": "string", "minLength": 1},
     "events": {
       "type": "array",
       "items": {

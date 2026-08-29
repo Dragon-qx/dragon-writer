@@ -27,12 +27,12 @@
 7. **为每个重要角色写一份角色档案**：写稳定属性（功能、欲望、恐惧、秘密、言行指纹、社交边界指纹、长期弧线），并在「物理数据时间线」「逻辑数据时间线」写入**出场基线行**（出场章、各物理维度当前值、体型/外貌快照、各逻辑维度当前值）。**两套时间线的列名分别与 `book_rules.md`「物理数据维度」「逻辑数据维度」声明完全一致**。易漂移的"当前状态"归入 `current_state.md`。**落盘前自查**：角色卡的「canon 数字锚点」表与卡内散文区、数据时间线中出现的硬数字一致。
 8. **写 `book_rules.md` / `pending_hooks.md` / `current_state.md`**，以及一张空的 `chapter_summaries.md`。`current_state.md` 必须包含事件时间轴、关系许可账本与带获知路径的章节感知事实表。
 9. **写 `style_guide.md`**：语言风格、高疲劳词清单、体裁爽点类型、视角约定、章首承接与章末断章约定（速查见 templates.md，技法库见 `references/chapter-craft.md`）。
-10. **保存 `story/snapshots/0000/` 作为第 0 章快照**（含 `manifest.json`）。
-11. **注入仪表盘**：把 `assets/dashboard.html` 复制到书文件夹（仅此一次，之后不再重写）。
+10. **基础文件全部填写并验证后，保存第 0 章 closed 快照**：运行 `python scripts/snapshot_book.py <book-dir> --chapter 0 --type closed`，再用 `--verify` 检查。`init_book.py` 不提前生成空白 `0000`，否则回滚会恢复到占位模板。
+11. **确认仪表盘已注入**：`init_book.py` 已把 `assets/dashboard.html` 复制到书文件夹；之后不再重写。
 12. 若用户要求立刻写正文，以模式 B 推进第一章。
 
 ## 相关文档
 
 - 文件职责与兼容命名：`references/file-contract.md`
 - 全部基础文件模板：`references/templates.md`
-- 双层质量门禁：`references/audit-dimensions.md`
+- 三道质量门禁：`references/chapter-protocol.md` 与 `references/audit-dimensions.md`

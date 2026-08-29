@@ -153,6 +153,29 @@ def analyze_book(book_dir: str, chapter: int = 0, window: int = 10) -> Dict:
     }
 
 
+def analyze_draft(book_dir: str, chapter: int, draft_path: str, window: int = 10) -> Dict:
+    """将冻结草稿与之前的唯一正式章比较；不要求草稿先复制进 chapters/。"""
+    if not os.path.isfile(draft_path):
+        raise ValueError(f"草稿不存在：{draft_path}")
+    previous = [(num, path) for num, path in _chapter_files(book_dir) if num < chapter][-window:]
+    target_text = _read(draft_path)
+    findings: List[Dict] = []
+    for previous_number, previous_path in previous:
+        findings.extend(compare_texts(target_text, _read(previous_path), previous_number))
+    blocking = sum(1 for finding in findings if finding["severity"] == "blocking")
+    warnings = sum(1 for finding in findings if finding["severity"] == "warning")
+    return {
+        "chapter": chapter,
+        "window": window,
+        "compared_chapters": [num for num, _ in previous],
+        "status": "fail" if blocking else "pass",
+        "blocking_count": blocking,
+        "warning_count": warnings,
+        "findings": findings,
+        "note": "机械层只检查近似文本；情节功能重复仍由知情审计判断。",
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="检查当前章与近章的近似文本重叠")
     parser.add_argument("book_dir", help="书籍根目录")

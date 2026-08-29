@@ -6,24 +6,56 @@
 """
 
 import argparse
+import glob
+import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 
 import _contract
 from _contract import file_sha256, now_iso, safe_join
 
-SNAPSHOT_VERSION = "1.1.0"
+SNAPSHOT_VERSION = "2.0.0"
+
+
+def _manifest_hash(manifest: dict) -> str:
+    body = dict(manifest)
+    body.pop("manifestSha256", None)
+    encoded = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def _snapshot_sources(book_dir: str, chapter: int) -> list:
+    result = list(_contract.resolve_snapshot_files(book_dir))
+    for rel in ("book.json",):
+        if rel not in result:
+            result.append(rel)
+    for path in glob.glob(os.path.join(book_dir, "chapters", "*.md")):
+        match = re.match(r"^(\d+)_", os.path.basename(path))
+        if match and int(match.group(1)) <= chapter:
+            rel = os.path.relpath(path, book_dir).replace(os.sep, "/")
+            if rel not in result:
+                result.append(rel)
+    runtime = os.path.join(book_dir, "story", "runtime")
+    for path in glob.glob(os.path.join(runtime, "chapter-*")):
+        match = re.match(r"^chapter-(\d+)", os.path.basename(path))
+        if (match and int(match.group(1)) <= chapter and ".superseded-" not in path
+                and ".work-packet." not in path and os.path.isfile(path)):
+            rel = os.path.relpath(path, book_dir).replace(os.sep, "/")
+            if rel not in result:
+                result.append(rel)
+    return sorted(result)
 
 
 def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
-                    force: bool = False) -> dict:
+                    force: bool = False, snapshot_type: str = "closed") -> dict:
     """创建快照。"""
     snapshots_dir = os.path.join(book_dir, "story", "snapshots")
     os.makedirs(snapshots_dir, exist_ok=True)
 
-    snap_name = f"{chapter:04d}"
+    snap_name = f"{chapter:04d}" if snapshot_type == "closed" else f"{snapshot_type}-{chapter:04d}"
     snap_dir = safe_join(snapshots_dir, snap_name)
 
     if os.path.exists(snap_dir) and not force:
@@ -37,7 +69,7 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
     included_files = []
     file_hashes = {}
     missing = []
-    for fpath in _contract.resolve_snapshot_files(book_dir):
+    for fpath in _snapshot_sources(book_dir, chapter):
         src = os.path.join(book_dir, fpath)
         if os.path.isfile(src):
             included_files.append(fpath)
@@ -47,6 +79,7 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
 
     manifest = {
         "snapshotVersion": SNAPSHOT_VERSION,
+        "snapshotType": snapshot_type,
         "chapter": chapter,
         "createdAt": now_iso(),
         "includedFiles": included_files,
@@ -54,6 +87,7 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
         "skillVersion": _contract.skill_version(),
         "schemaVersion": "1.0.0",
     }
+    manifest["manifestSha256"] = _manifest_hash(manifest)
 
     if dry_run:
         return {
@@ -64,6 +98,8 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
             "missing_files": missing,
         }
 
+    if os.path.isdir(snap_dir) and force:
+        shutil.rmtree(snap_dir)
     # 创建快照目录，按书根相对路径保留结构（story/... 与 chapters/...）
     for fpath in included_files:
         src = os.path.join(book_dir, fpath)
@@ -84,8 +120,8 @@ def create_snapshot(book_dir: str, chapter: int, dry_run: bool = False,
     }
 
 
-def verify_snapshot(book_dir: str, chapter: int) -> dict:
-    """验证快照哈希（按 manifest 自身键校验，兼容新旧布局）。"""
+def verify_snapshot(book_dir: str, chapter: int, compare_current: bool = False) -> dict:
+    """验证快照完整性；封板时还要证明快照与当前工作区完全一致。"""
     snap_name = f"{chapter:04d}"
     snap_dir = os.path.join(book_dir, "story", "snapshots", snap_name)
     manifest_path = os.path.join(snap_dir, "manifest.json")
@@ -96,8 +132,28 @@ def verify_snapshot(book_dir: str, chapter: int) -> dict:
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
 
+    if manifest.get("chapter") != chapter:
+        return {"ok": False, "error": "快照 manifest 章号与目录不一致"}
+    included = manifest.get("includedFiles")
+    hashes = manifest.get("fileHashes")
+    if not isinstance(included, list) or not included or not isinstance(hashes, dict):
+        return {"ok": False, "error": "快照 manifest 缺少非空 includedFiles/fileHashes"}
+    if set(included) != set(hashes):
+        return {"ok": False, "error": "快照 includedFiles 与 fileHashes 不一致"}
+    if manifest.get("snapshotVersion") == SNAPSHOT_VERSION:
+        if manifest.get("manifestSha256") != _manifest_hash(manifest):
+            return {"ok": False, "error": "快照 manifest 自身哈希不匹配"}
+    if compare_current:
+        if manifest.get("snapshotVersion") != SNAPSHOT_VERSION or manifest.get("snapshotType") != "closed":
+            return {"ok": False, "error": "封板必须使用当前协议的 closed 快照"}
+        required = {"book.json", "chapters/index.json"}
+        finals = [path for path in included if re.match(rf"^chapters/{chapter:04d}_.+\.md$", path)]
+        if not required.issubset(set(included)) or len(finals) != 1:
+            return {"ok": False, "error": "closed 快照缺少 book/index/本章唯一正式正文"}
+
     mismatches = []
     missing = []
+    current_mismatches = []
     for fpath, expected_hash in manifest.get("fileHashes", {}).items():
         full = os.path.join(snap_dir, fpath)
         if not os.path.isfile(full):
@@ -106,12 +162,20 @@ def verify_snapshot(book_dir: str, chapter: int) -> dict:
             actual = file_sha256(full)
             if actual != expected_hash:
                 mismatches.append({"file": fpath, "expected": expected_hash, "actual": actual})
+        if compare_current:
+            current = safe_join(book_dir, fpath)
+            if not os.path.isfile(current):
+                current_mismatches.append({"file": fpath, "reason": "工作区文件缺失"})
+            elif file_sha256(current) != expected_hash:
+                current_mismatches.append({"file": fpath, "reason": "工作区文件已变化"})
 
     return {
-        "ok": not mismatches and not missing,
+        "ok": not mismatches and not missing and not current_mismatches,
         "snapshot_dir": snap_name,
         "mismatches": mismatches,
         "missing": missing,
+        "current_mismatches": current_mismatches,
+        "manifest_sha256": file_sha256(manifest_path),
     }
 
 
@@ -121,6 +185,8 @@ def main():
     parser.add_argument("--chapter", type=int, required=True, help="章节编号")
     parser.add_argument("--dry-run", action="store_true", help="默认支持 dry-run")
     parser.add_argument("--force", action="store_true", help="强制覆盖已有快照")
+    parser.add_argument("--type", choices=["prewrite", "closed", "recovery"], default="closed",
+                        help="快照角色；封板只接受 closed")
     parser.add_argument("--verify", action="store_true", help="验证快照哈希而非创建")
     parser.add_argument("--json", action="store_true", help="输出机器可读 JSON")
     args = parser.parse_args()
@@ -128,7 +194,10 @@ def main():
     if args.verify:
         result = verify_snapshot(args.book_dir, args.chapter)
     else:
-        result = create_snapshot(args.book_dir, args.chapter, dry_run=args.dry_run, force=args.force)
+        result = create_snapshot(
+            args.book_dir, args.chapter, dry_run=args.dry_run, force=args.force,
+            snapshot_type=args.type,
+        )
 
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
