@@ -12,7 +12,7 @@ import re
 import sys
 from typing import List, Optional, Tuple
 
-from _contract import count_words  # noqa: E402
+from _contract import count_characters, count_words  # noqa: E402
 
 
 def parse_chapter_file(name: str) -> Optional[Tuple[int, str]]:
@@ -52,6 +52,7 @@ def scan_chapters(chapters_dir: str) -> List[dict]:
             "title": title,
             "status": "drafting",
             "wordCount": word_count,
+            "manuscriptChars": count_characters(text),
         })
     # 按章号数值排序
     entries.sort(key=lambda e: e["number"])

@@ -1,129 +1,115 @@
 # 模式 B：续写已有书
 
-## 触发时机
+## 不变量
 
-书已存在，往下写。
+- 规划、正文、修订、状态更新都由主代理逐章串行完成。禁止子代理写正文、补片段、改段落、提前写后章或维护 Runtime。
+- 子代理只在当前草稿冻结、机械门禁与主代理知情审计均通过后做一次无背景冷读；使用空上下文，不附一审报告，不修改文件。
+- 状态机为 `prepared → drafted → gated → audited → closed`。只有 `closed` 后才能准备下一章；修改已封板章必须显式 `reopen`。
+- 上下文过长时停止生成，从磁盘重建当前章工作包；不得并行分章，也不得用聊天记忆替代文件证据。
 
-## 步骤
+## 逐章事务
 
-1. **定位当前书**：若有多本且未指定，列出候选并询问。
-2. **确定下一章章号**：从连续章节文件和 `chapters/index.json` 确定最新落硬盘章节——不要只信一份陈旧的状态文件。
-3. **读受保护上下文**：
-   - `author_intent.md`（含不可妥协项）
-   - `current_focus.md`
-   - `story_frame.md` / `story_bible.md`
-   - `volume_map.md` / `outline.md`
-   - `book_rules.md`
-   - `current_state.md`（事实表 + 道具账本 + 空间锚点）
-   - 相关角色档案
-   - `pending_hooks.md`（活跃钩子）
-4. **读可压缩上下文**：
-   - 最近几章摘要
-   - 最近 1–3 章结尾（**用于场景续接判断与开头 / 收尾类型轮换**，不是用来在下一章复述的信息）
-   - `audit-drift.md`
-5. **创建 `runtime/chapter-NNNN.intent.md`**（每章都创建）：
-   - chapter goal
-   - outline node
-   - current task
-   - reader expectation
-   - hooks to advance / resolve / keep buried
-   - must keep / must avoid
-   - **章首 / 章末**：开头类型 + 收尾断章类型（对照 `references/chapter-craft.md` 类型库，均须与近 3 章轮换）
-   - required end-of-chapter change（章末"画面上出现什么"，不是"总结出什么"）
-6. **起草**：从选定的上下文起草，而不是把整个项目都堆进来。开写前读 `references/chapter-craft.md`：
-   - **章首三行入戏**：前三行落在正在发生的事上，禁止回顾式承接；回顾前情 ≤2 句且必须夹带新信息。
-   - **章末断章**：按断章技法库在能量上升沿切，禁止总结本章 / 金句升华 / 宣布计划 / 情绪命名；钩子推进等元数据只进 `chapter_summaries.md`，绝不写进正文。
-   - **类型轮换**：开头类型与收尾类型均不得与近 3 章相同。
-7. **双层质量门禁（子代理审查）**：
+### 1. 前置锁与准备
 
-   审计**不得**由起草同一上下文自评——这会导致文风维度（维 10/20/21/22/23）自评失效、审-改循环收敛到局部最优。审计必须在独立子代理中以**新鲜读者视角**运行。
+先确定唯一书籍与下一章号，再运行：
 
-   ### 7.1 主代理准备审计包
+```bash
+python scripts/check_chapter_draft.py <book-dir> --chapter <NNNN> --preflight
+python scripts/chapter_txn.py <book-dir> --chapter <NNNN> prepare
+```
 
-   起草完成后，主代理按体裁裁剪出激活维度清单，并准备审计包：
+`prepare` 会验证上一章结构化事务必须为 `closed` 或经迁移确认的 `legacy_closed`。3.13 项目先运行 `python scripts/migrate_3_13_to_4_0.py <book-dir>`；迁移不会伪造历史审计或缺失的写作计划。
 
-   ```
-   ## 章节草稿
-   {chapter draft 全文}
+### 2. 重建有边界的主代理工作包
 
-   ## 激活的审计维度（体裁裁剪后）
-   {active dimension IDs + 完整的判定规则文本，从 references/audit-dimensions.md 复制}
+每章重新读取并裁剪：作者不可妥协项、当前卷节点与规则；相关故事时钟、信息获知行、关系许可行、道具与空间行；相关角色卡和钩子；上一章末尾、近章摘要与近 5–10 章新意指纹；会影响本章的未解决漂移。
 
-   ## 连续性事实（仅用于审计，非写作指引）
-   - 主角：<名字、身份、当前状态>
-   - 当前地点/时间：<...>
-   - 已知事实：<仅与本章情节直接相关的，从 current_state.md 事实表裁剪>
-   - 道具状态：<仅本章可能出现的道具，从 current_state.md 道具账本裁剪，含 origin 与最近两章变化事件>
-   - 空间锚点：<仅本章场景，从 current_state.md 空间锚点裁剪>
-   - canon 数字锚点：<本章出场角色的「canon 数字锚点」表裁剪（仅 anchor_id + 事项 + 值），从角色卡「canon 数字锚点 Number Anchors」区块提取>
-   - 活跃钩子：<仅本章相关的 hook_id + 一句话，从 pending_hooks.md 裁剪>
-   - 近 3 章开头/收尾/过渡摘要：<从 chapter_summaries.md 与近 3 章正文提取，附 chapter-craft.md 类型标注，供维 42/43 比对>
-   ```
+工作包只供主代理使用。对话已堆积多章全文、多个报告，或主代理不能逐项复述当前章硬约束时，立即从这些文件重新取数后再继续。
 
-   **关键原则**：连续性事实是**从 current_state.md 中裁剪的纯事实**，不含"作者想让读者感受到什么"、不含大纲、不含角色档案、不含完整 current_state。canon 数字锚点与此不冲突：**排除的是角色档案中的写作指引（欲望 / 弧线 / 技法），数字锚点是可判定事实，必须给到审计子代理**——否则"卡说 21 岁、正文写 20 岁"这类冲突永远无法被冷读发现。
+### 3. 建立结构化意图
 
-   ### 7.2 启动子代理审计
+创建 `story/runtime/chapter-NNNN.intent.json`，以 `schemas/chapter-intent.schema.json` 为唯一字段定义。至少填写：戏剧问题、POV、时间架构、必要场景节点，以及起草后补入的 Evidence Map。信息、关系与跨章新意的完整推理可留在主代理工作笔记中；需要机器判定的增量可写 `knowledgeDeltas`、`relationshipDeltas`、`noveltyDelta`。
 
-   用 Agent 工具启动子代理（`subagent_type: "general-purpose"`），提示词核心：
+不要手写同名 Markdown。生成只读视图：
 
-   > 你是一名"新鲜读者"审计员。你正在审读一本中文网络小说的一个章节。**你没有读过大纲、作者意图或任何前文章节** —— 请以第一次阅读的读者身份来读这篇草稿。
-   >
-   > 先通读全文，标记阅读体验断裂处；再按以下激活维度逐维审计。每维给出 pass/fail/unknown + 具体证据（引用原文）+ 修改建议。
-   >
-   > 特别注意文风问题：重复句式、AI 标志语、段落节奏单调、转折可预测、套话密度、跨章重复。
+```bash
+python scripts/render_intent.py <book-dir>/story/runtime/chapter-NNNN.intent.json <book-dir>/story/runtime/chapter-NNNN.intent.md
+```
 
-   子代理**不持有**：大纲 / 作者意图 / 角色档案 / 完整 current_state / 前文章节正文（仅持有审计包中的最小事实 + 近 3 章摘要）。
+`book.json.chapterMinChars` 是书级硬下限，intent 只能提高规划目标，不能降低下限。场景节点只列真正必要的戏剧工作；`descriptionObligation` 写清描写承担的行动可读性、情绪外化、氛围压力、关系变化或信息呈现职责，不设固定感官数量。
 
-   ### 7.3 子代理返回结构化报告
+### 4. 主代理独立起草并冻结
 
-   子代理按以下格式返回：
+只写 `story/runtime/chapter-NNNN.draft.md`。按戏剧变化选择场景，不按早晨到夜晚覆盖一天；无有效变化的时段用 summary / ellipsis，跳时后重新锚定时间、地点、人物位置和状态。每个角色的言行分别核对获知路径与关系许可；同场、亲近、作者知道或读者知道均不自动授权。
 
-   ```markdown
-   # 审计报告
+草稿完成后运行：
 
-   ## 第一层：驻场初筛（10 点）
-   - [PASS/FAIL] 维度名：证据 "..." → 建议 "..."
+```bash
+python scripts/chapter_txn.py <book-dir> --chapter <NNNN> mark-drafted
+```
 
-   ## 第二层：深化审计（激活维度）
-   - [FAIL] 维10 词汇疲劳：...
-   - [PASS] 维22 公式化转折：...
+该动作锁定草稿哈希。之后任何正文修改都会使既有证据和门禁失效；先运行 `chapter_txn.py ... reopen`，它会把旧门禁 / 审计 manifest 可恢复地改名为 `superseded-*`，再重新走 `mark-drafted`、证据和门禁。
 
-   ## 文风专项
-   - 重复句式：第3/7/14段均以"他……"开头
-   - AI标志语："不禁"出现4次（第2/5/9/12段）
-   - 节奏：第4-8段均为长段（>120字），建议拆短
+### 5. 填写证据并过机械门禁
 
-   ## 总结
-   N 项需修改，M 项建议优化
-   ```
+按空行确定性编号 `P1..Pn`。每个 `sceneBeats[].beatId` 必须恰好有一个 `evidence[]`，包含当前草稿 SHA-256、合法段落起止、该范围内精确命中的短引和 `status: pass`。证据不能跨段冒领，多个节点不得无理由复用同一短引。
 
-   ### 7.4 主代理修改
+更新 JSON 后重新生成 Markdown 视图，再运行：
 
-   主代理根据审计报告修改草稿。主代理持有完整上下文（大纲/意图/角色/状态），能正确实施修改。**不要**逐条"最小修补"——如果报告指出结构性问题（如连续 5 段同节奏、开头方式与近 3 章重复），应做结构性重写。
+```bash
+python scripts/chapter_txn.py <book-dir> --chapter <NNNN> gate
+```
 
-   ### 7.5 可选二审
+脚本检查 schema、事务链、书级字符下限、占位符、节点—证据一一对应、段落范围、短引与草稿哈希。失败时先定位缺少的过程、转折、动机、动作可读性、关系后效或章际承接，只补这些叙事工作；禁止复述前情、重复心理、堆景物或同义改写凑字数。
 
-   修改后，可再次启动子代理二审（同一审计包格式，附修改后的草稿 + 原报告）。若二审仍有 ≥2 个 blocking 项，主代理再次修改。**二审为上限**，避免无限循环。
+### 6. 主代理知情审计
 
-   ### 7.6 审计发现留痕
+主代理使用完整项目文件检查：故事时钟与章节切分、空间移动、信息获知链、关系权限、道具/伤势/服装/数字、钩子与 canon、章际承接、近 5–10 章情节和文本重复。报告写入书目录内的 Markdown，例如 `story/runtime/chapter-NNNN.informed-audit.md`。
 
-   未当场修复的审计发现，必须落记录（`audit-drift.md`）。
+发现正文问题后必须修改草稿，并从 `mark-drafted`、Evidence Map 与 `gate` 重新开始。通过后登记：
 
-8. **事务式落盘**（详见 `references/file-contract.md` 的"章节落盘事务流程"）：
-   - 按序写入：`chapters/NNNN_<title>.md` → `chapters/index.json` → `chapter_summaries.md` 行（含**章节 delta**）→ `current_state.md`（事实表 + 关系 + 道具账本 + 空间锚点）→ `pending_hooks.md` → `book.json`（status / updatedAt 同步）→ intent 的「实际偏离 Deviation Log」（若产出偏离 intent 的 goal / 必须场景 / 章末画面）
-   - **字数禁手写**：`chapters/index.json` 的 wordCount 必须由 `python scripts/rebuild_index.py <book-dir>` 生成，禁止手写数值
-   - 道具账本**三核对**：数量、状态、存放位置——三项逐一对着本章正文末态核对，不允许只改数量
-   - **新增固定物件 / 布局变化 → 空间锚点登记**（新列或新锚点行，遵循 valid_until 失效规则）
-   - **hook 收敛复查**：对本章 summary 的 events 逐项自问 advance / resolve / defer；notes 出现"揭露 / 兑现 / 真相"字样的 hook 必须重新评估 lifecycle_status（揭尽 → resolved 或收窄为新子 hook）；正文推进了某 hook 内容的，`last_advanced_chapter` / `chapters_since_advance` 同步
-   - 全部写入后运行一致性验证：`python scripts/validate_book.py <book-dir>`（FAIL 则修复后再落盘）
-   - 完成后创建章末快照 `snapshots/<NNNN>/`（含 `manifest.json`）
-   - **不要重写仪表盘**——它运行时自会读取最新文件
-9. **合并审核询问（仅在任务终点一次）**：若是本轮写作任务的**最后一章**（单章，或连续创作的终点），主代理询问用户"是否进入合并审核？"——**连续创作时中途各章完成不打断、不询问**。进入后范围由用户决定（全部 / 部分 / 指定区间），执行见 `references/workflow-combined-audit.md`。
+```bash
+python scripts/chapter_txn.py <book-dir> --chapter <NNNN> record-audit --kind informed --report story/runtime/chapter-NNNN.informed-audit.md --status pass
+```
 
-## 相关文档
+### 7. 全新子代理纯正文冷读
 
-- 文件职责与权威顺序：`references/file-contract.md`
-- 章节落盘事务流程：`references/file-contract.md`
-- 章节 delta 模板：`references/templates.md`
-- 章首 / 章末技法（起草前必读）：`references/chapter-craft.md`
-- 双层质量门禁与子代理审查机制：`references/audit-dimensions.md`
+冷读稿源必须显式指定，禁止“优先草稿”式猜测：
+
+```bash
+# 单章：只读当前冻结草稿
+python scripts/build_cold_read_packet.py <book-dir> --draft <NNNN> --manifest story/runtime/chapter-NNNN.cold-source.json
+
+# 章际：上一章必须是正式稿，当前章必须是冻结草稿
+python scripts/build_cold_read_packet.py <book-dir> --final <上一章> --draft <NNNN> --manifest story/runtime/chapter-NNNN.cold-source.json
+```
+
+只把脚本标准输出交给一个空上下文审计子代理。包内不得出现题材、大纲、意图、人物卡、时间线、状态、信息链、关系账本、钩子、字数、疑点、预期修法、旧报告或主代理解释。提示只要求严重度、正文位置与短引、读者影响、修复方向；证据不足写 `unknown`。子代理只报告，不续写、不改写、不更新文件。
+
+冷读报告写回书目录后登记：
+
+```bash
+python scripts/chapter_txn.py <book-dir> --chapter <NNNN> record-audit --kind cold --report story/runtime/chapter-NNNN.cold-audit.md --status pass
+```
+
+两类审计都为 pass 后事务才进入 `audited`。冷读发现需要改正文时，由主代理修改并重新执行步骤 4–7；二审用另一个空上下文审计员，只给修改后的纯正文，不附一审报告。
+
+### 8. 落盘、验证与封板
+
+1. 创建写入前快照。
+2. 将已审计草稿按字节复制到唯一的 `chapters/NNNN_标题.md`。
+3. 更新摘要、故事时钟、事实获知链、关系许可、道具、钩子、焦点和 `book.json.updatedAt`；不得把下一章计划提前写成已发生事实。
+4. 运行 `python scripts/rebuild_index.py <book-dir>`，不得手填计数。
+5. 运行 `python scripts/check_chapter_overlap.py <book-dir> --chapter <NNNN>` 与 `python scripts/validate_book.py <book-dir>`。
+6. 创建章末快照。
+7. 运行 `python scripts/chapter_txn.py <book-dir> --chapter <NNNN> close`。
+
+`close` 会重验草稿、正式稿、门禁报告、两份审计报告及其哈希，并执行全书验证；任一文件在登记后改变都拒绝封板。连续写作中途不询问合并审核，只在本轮最后一章 `closed` 后询问一次。
+
+## 验收
+
+- 实际去空白字符数达到书级硬下限，所有必要描写职责均有当前草稿证据；没有占位字段。
+- 角色知识与关系行为都有独立、可定位的获得/变化依据；没有作者信息泄漏或初识即旧识。
+- 章节边界服务戏剧单位，不是日程切片；近章不存在同构事件换措辞重演。
+- 冷读稿源 manifest 明确区分 final / draft，包内没有隐藏上下文。
+- 事务为 `closed` 且哈希链、全书验证与章末快照均有效。

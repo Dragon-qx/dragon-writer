@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""账本一致性新检查测试 —— validate_book.py 的 T1.2 / T2.2 / T3.2 / T4.2 / T5.2 / T7 / T14.3。
+"""账本一致性检查测试 —— validate_book.py 的 T1.2 / T2.2 / T3.2 / T4.2–T4.4 / T5.2 / T7 / T14.3。
 
 运行：python -m pytest tests/test_validate_checks.py -v
 """
@@ -18,12 +18,19 @@ from validate_book import validate  # noqa: E402
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 STD_BOOK = os.path.join(FIXTURES_DIR, "standard-book")
+SKELETON_BOOK = os.path.join(os.path.dirname(__file__), "..", "assets", "book-skeleton")
 
 
 def copy_std(tmp_path, name="book"):
     """从 standard-book 复制一份可变书籍。"""
     target = os.path.join(tmp_path, name)
     shutil.copytree(STD_BOOK, target)
+    return target
+
+
+def copy_skeleton(tmp_path, name="skeleton"):
+    target = os.path.join(tmp_path, name)
+    shutil.copytree(SKELETON_BOOK, target)
     return target
 
 
@@ -89,6 +96,55 @@ class TestWordCountConsistency:
         result = validate(book)
         assert not messages(result, "errors", "wordCount 与正文不符")
 
+    def test_below_hard_character_minimum_is_error(self, tmp_path):
+        book = copy_std(tmp_path)
+        book_path = os.path.join(book, "book.json")
+        with open(book_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["chapterMinChars"] = 500
+        with open(book_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        result = validate(book)
+        assert messages(result, "errors", "章节字符数不足")
+
+    def test_above_soft_character_maximum_is_warning(self, tmp_path):
+        book = copy_std(tmp_path)
+        book_path = os.path.join(book, "book.json")
+        with open(book_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["chapterMinChars"] = 50
+        data["chapterTargetChars"] = 80
+        data["chapterMaxChars"] = 100
+        with open(book_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        result = validate(book)
+        assert messages(result, "warnings", "章节字符数超过软上限")
+
+    def test_invalid_length_contract_order_is_error(self, tmp_path):
+        book = copy_std(tmp_path)
+        book_path = os.path.join(book, "book.json")
+        with open(book_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["chapterMinChars"] = 300
+        data["chapterTargetChars"] = 200
+        data["chapterMaxChars"] = 100
+        with open(book_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        result = validate(book)
+        assert messages(result, "errors", "章节长度契约顺序错误")
+
+    def test_imported_history_can_start_gate_from_next_chapter(self, tmp_path):
+        book = copy_std(tmp_path)
+        book_path = os.path.join(book, "book.json")
+        with open(book_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["chapterMinChars"] = 500
+        data["chapterLengthGateFromChapter"] = 3
+        with open(book_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        result = validate(book)
+        assert not messages(result, "errors", "章节字符数不足")
+
 
 class TestFactEvidence:
     """T4.2：事实表 evidence 引文必须在来源章命中。"""
@@ -138,6 +194,76 @@ class TestFactEvidence:
         result = validate(book)
         warns = messages(result, "warnings", "缺少 evidence 列")
         assert warns, "旧表缺少 evidence 列应提示升级"
+
+
+class TestKnowledgeAcquisition:
+    """T4.3：角色获知路径与获知章正文证据必须完整。"""
+
+    def _replace_fact_table(self, book, acquisition_evidence):
+        state_path = os.path.join(book, "story", "current_state.md")
+        with open(state_path, "r", encoding="utf-8") as f:
+            lines = f.read().split("\n")
+        header_index = next(i for i, line in enumerate(lines) if line.startswith("| fact_id"))
+        end_index = header_index + 2
+        while end_index < len(lines) and lines[end_index].startswith("| fact-"):
+            end_index += 1
+        replacement = [
+            "| fact_id | statement | subject | truth_status | introduced_chapter | invalidated_chapter | source_chapter | knower | known_from_chapter | confidence | evidence | acquisition_mode | acquisition_event_id | acquisition_evidence | notes |",
+            "| --- | --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- | --- | --- | --- | --- | --- |",
+            "| fact-001 | 陆恒住甲字七号舍 | 陆恒 | 当前为真 | 1 | — | 1 | 陆恒 | 1 | 确证 | 陆恒站在甲字七号舍前 | 亲历 | evt-001 | "
+            + acquisition_evidence
+            + " | 第1章 |",
+        ]
+        lines[header_index:end_index] = replacement
+        with open(state_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+
+    def test_missing_acquisition_columns_warn_for_legacy_book(self, tmp_path):
+        book = copy_std(tmp_path)
+        result = validate(book)
+        assert messages(result, "warnings", "事实表缺少角色获知链列")
+
+    def test_fabricated_acquisition_evidence_is_error(self, tmp_path):
+        book = copy_std(tmp_path)
+        self._replace_fact_table(book, "陆恒从未听过的密语")
+        result = validate(book)
+        assert messages(result, "errors", "角色获知证据在章节 1 正文未命中")
+
+    def test_real_acquisition_evidence_is_fine(self, tmp_path):
+        book = copy_std(tmp_path)
+        self._replace_fact_table(book, "陆恒站在甲字七号舍前")
+        result = validate(book)
+        assert not messages(result, "errors", "角色获知证据")
+
+
+class TestRelationshipPermissions:
+    """T4.4：关系许可必须引用时间轴事件与正文证据。"""
+
+    def test_legacy_book_without_ledger_warns(self, tmp_path):
+        book = copy_std(tmp_path)
+        result = validate(book)
+        assert messages(result, "warnings", "缺少关系许可账本")
+
+    def test_skeleton_relationship_ledger_is_valid(self, tmp_path):
+        book = copy_skeleton(tmp_path)
+        result = validate(book)
+        assert not messages(result, "errors", "关系")
+
+    def test_fabricated_relationship_evidence_is_error(self, tmp_path):
+        book = copy_skeleton(tmp_path)
+        state_path = os.path.join(book, "story", "current_state.md")
+        with open(state_path, "r", encoding="utf-8") as f:
+            lines = f.read().split("\n")
+        row_index = next(i for i, line in enumerate(lines) if line.startswith("| rel-002"))
+        cells = lines[row_index].split("|")
+        header = next(line for line in lines if line.startswith("| pair_id")).split("|")
+        evidence_index = next(i for i, cell in enumerate(header) if cell.strip() == "evidence")
+        cells[evidence_index] = " 从未发生的十年旧约 "
+        lines[row_index] = "|".join(cells)
+        with open(state_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+        result = validate(book)
+        assert messages(result, "errors", "关系变化证据在章节 2 正文未命中")
 
 
 class TestPropOriginDrift:

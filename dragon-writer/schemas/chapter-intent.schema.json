@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragon-writer.local/schemas/chapter-intent.schema.json",
+  "title": "Dragon Writer Chapter Intent",
+  "type": "object",
+  "required": ["schemaVersion", "chapter", "dramaticQuestion", "pov", "timeArchitecture", "knowledgePermissions", "relationshipPermissions", "noveltyDelta", "sceneBeats", "evidence"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": "4.0"},
+    "chapter": {"type": "integer", "minimum": 1},
+    "dramaticQuestion": {"type": "string", "minLength": 2},
+    "pov": {"type": "string", "minLength": 1},
+    "plannedTargetChars": {"type": "integer", "minimum": 1},
+    "timeArchitecture": {
+      "type": "object",
+      "required": ["start", "end", "elapsed", "cutReason"],
+      "additionalProperties": false,
+      "properties": {
+        "start": {"type": "string", "minLength": 1},
+        "end": {"type": "string", "minLength": 1},
+        "elapsed": {"type": "string", "minLength": 1},
+        "cutReason": {"type": "string", "minLength": 2}
+      }
+    },
+    "knowledgeDeltas": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "relationshipDeltas": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "noveltyDelta": {"type": "string", "minLength": 2},
+    "knowledgePermissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["character", "knownAtStart", "acquiredThisChapter", "stillUnknown"],
+        "additionalProperties": false,
+        "properties": {
+          "character": {"type": "string", "minLength": 1},
+          "knownAtStart": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "acquiredThisChapter": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["fact", "acquisitionMode", "eventId", "evidencePlan"],
+              "additionalProperties": false,
+              "properties": {
+                "fact": {"type": "string", "minLength": 1},
+                "acquisitionMode": {"type": "string", "minLength": 1},
+                "eventId": {"type": "string", "minLength": 1},
+                "evidencePlan": {"type": "string", "minLength": 2}
+              }
+            }
+          },
+          "stillUnknown": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+        }
+      }
+    },
+    "relationshipPermissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pairId", "stageAtStart", "allowedFamiliarity", "plannedChange", "catalystEventId", "aftermath"],
+        "additionalProperties": false,
+        "properties": {
+          "pairId": {"type": "string", "minLength": 1},
+          "stageAtStart": {"type": "string", "minLength": 1},
+          "allowedFamiliarity": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "plannedChange": {"type": "string", "minLength": 1},
+          "catalystEventId": {"type": "string", "minLength": 1},
+          "aftermath": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "sceneBeats": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["beatId", "mode", "dramaticFunction", "goalOrPressure", "conflictOrTurn", "requiredResult", "timeSpaceAnchor", "descriptionObligation"],
+        "additionalProperties": false,
+        "properties": {
+          "beatId": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$", "minLength": 1},
+          "mode": {"enum": ["scene", "summary", "transition"]},
+          "dramaticFunction": {"type": "string", "minLength": 2},
+          "goalOrPressure": {"type": "string", "minLength": 2},
+          "conflictOrTurn": {"type": "string", "minLength": 2},
+          "requiredResult": {"type": "string", "minLength": 2},
+          "timeSpaceAnchor": {"type": "string", "minLength": 2},
+          "descriptionObligation": {"type": "string", "minLength": 2}
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["beatId", "paragraphStart", "paragraphEnd", "quote", "draftSha256", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "beatId": {"type": "string", "minLength": 1},
+          "paragraphStart": {"type": "integer", "minimum": 1},
+          "paragraphEnd": {"type": "integer", "minimum": 1},
+          "quote": {"type": "string", "minLength": 1},
+          "draftSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "status": {"const": "pass"},
+          "sharedEvidenceReason": {"type": "string", "minLength": 2}
+        }
+      }
+    }
+  }
+}

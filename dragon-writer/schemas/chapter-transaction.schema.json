@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragon-writer.local/schemas/chapter-transaction.schema.json",
+  "title": "Dragon Writer Chapter Transaction",
+  "type": "object",
+  "required": ["schemaVersion", "chapter", "state", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": "4.0"},
+    "chapter": {"type": "integer", "minimum": 1},
+    "state": {"enum": ["prepared", "drafted", "gated", "audited", "closed", "reopened", "legacy_closed"]},
+    "draftSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "finalSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "legacyMigration": {"type": "boolean"},
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sequence", "from", "to", "timestamp", "eventHash"],
+        "additionalProperties": true,
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 1},
+          "from": {"type": "string"},
+          "to": {"type": "string"},
+          "timestamp": {"type": "string", "minLength": 1},
+          "previousEventHash": {"type": "string"},
+          "eventHash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

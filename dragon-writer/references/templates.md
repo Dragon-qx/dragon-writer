@@ -20,8 +20,8 @@
 - [fanfic_canon.md](#fanfic_canonmd)
 - [parent_canon.md](#parent_canonmd)
 - [emotional_arcs.md](#emotional_arcsmd)
-- [项目敏感内容/措辞约束](#项目敏感内容措辞约束)
-- [chapter-NNNN.intent.md](#chapter-nnnnintentmd)
+- [chapter-NNNN.intent.json](#chapter-nnnnintentjson)
+- [chapter-NNNN.intent.md（3.x legacy）](#chapter-nnnnintentmd3x-legacy)
 - [快照 manifest](#快照-manifest)
 - [rewrite manifest](#rewrite-manifest)
 - [章节 delta](#章节-delta)
@@ -39,6 +39,10 @@
   "status": "outlining",
   "targetChapters": 200,
   "chapterWordCount": 3000,
+  "chapterMinChars": 3000,
+  "chapterTargetChars": 3300,
+  "chapterMaxChars": 4500,
+  "chapterLengthGateFromChapter": 1,
   "createdAt": "<ISO timestamp>",
   "updatedAt": "<ISO timestamp>",
   "schemaVersion": "1.0.0",
@@ -46,7 +50,7 @@
 }
 ```
 
-> `skillVersion` 由 `scripts/init_book.py` 从 `_meta.json` 读取盖章，**禁止手写**；续写每章落盘时同步 `status`（outlining → drafting）与 `updatedAt`。
+> `chapterMinChars` 是不可低于的交付线，`chapterTargetChars` 是规划值，`chapterMaxChars` 是软上限；统一按去空白字符统计。`chapterLengthGateFromChapter` 默认 1；导入旧稿时可设为“最后一个导入章 + 1”，只豁免历史原稿，不豁免后续新章。旧书没有新字段时，`chapterWordCount` 同时作为下限与目标。`skillVersion` 由 `scripts/init_book.py` 从 `_meta.json` 读取盖章，**禁止手写**；续写每章落盘时同步 `status`（outlining → drafting）与 `updatedAt`。
 
 ## author_intent.md
 
@@ -138,6 +142,9 @@
 
 ## 言行指纹 Speech And Behavior Fingerprint
 
+## 社交边界指纹 Social Boundary Fingerprint
+> 只写稳定倾向：建立信任的速度与条件、陌生 / 熟悉时的称呼差异、允许身体接触与秘密披露的条件、如何表达亲近或拒绝。当前对某人的关系状态不写这里，写 `current_state.md`「关系许可账本」。
+
 ## 成长弧线 Arc
 
 ## 物理数据时间线 Physical Data Timeline
@@ -166,6 +173,7 @@
 ## POV 与叙事距离 POV And Narrative Distance
 
 ## 题材规则 Genre Rules
+> 记录作品选择使用的类型承诺、叙事惯例与可选技法，不是允许 / 禁止创作的题材清单。混合、实验或未分类作品可写「自定义」，skill 不据此缩窄内容范围。
 
 ## 硬定局锁 Hard Canon Locks
 
@@ -240,6 +248,20 @@
 
 ## 地点与时间 Location And Time
 
+## 事件时间轴 Event Timeline（追加式故事时钟）
+
+> 记录正文实际发生的事件及耗时，不把“计划在下一章发生”的内容提前写入。章节号不是时间单位：一章可持续数分钟或跨越多年，同一分钟也可跨章。
+
+| event_id | chapter | sequence | start_time | end_time | elapsed | location | participants | preconditions | event | outcome | presentation |
+| --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| evt-001 | 1 | 1 | 第 1 日·申时 | 第 1 日·酉初 | 约一时辰 | 甲字七号舍 | 主角、林逸 | 主角刚入门 | 两人初次交谈并约定次日合练 | 达成一次合练约定，尚未建立私人信任 | scene |
+
+**治理规则**：
+- `sequence` 表示同章内顺序；并发事件可使用相同 sequence 并在 notes / event 中说明。
+- `presentation` 使用 `scene / summary / ellipsis`：场景化、概述、留白跳过。
+- 中长跳时后的第一个场景尽快给出时间、地点、人物状态三类锚点；无效等待 / 通勤 / 例行日程优先 summary 或 ellipsis。
+- 新事件的 preconditions 必须已经发生；旅行耗时、伤势恢复、训练进展等不能超出 `book_rules.md` 已建规则。
+
 ## 主角 Protagonist
 - status:
 - goal:
@@ -247,14 +269,30 @@
 
 ## 人物关系 Relationships
 
+> 给仪表盘看的当前关系摘要。权威证据与行为权限见下方「关系许可账本」。
+
+## 关系许可账本 Relationship Permission Ledger
+
+> 维 27 的硬边界。一对角色一行，关系可以不对称；若 A 对 B 与 B 对 A 的信任 / 称呼 / 接触许可不同，在 `asymmetry` 明写。初识角色可以快速靠近，但每次跃迁都必须有催化事件和正文证据。
+
+| pair_id | A | B | first_met_chapter | prior_history | current_stage | trust_basis | allowed_familiarity | private_knowledge_shared | address_touch_boundary | last_change_chapter | catalyst_event_id | evidence | asymmetry |
+| --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- |
+| rel-001 | 主角 | 林逸 | 1 | 无 | 有一次合练约定的相识者 | 林逸以食物示好；主角接受一次合练邀请 | 可直呼姓名、谈公开的修炼目标；不可替对方做主或默认托命 | 无 | 无亲昵称呼；无主动身体接触 | 1 | evt-001 | “明日寅时，一起练一趟？” | 林逸更外向，主角仍保留戒心 |
+
+**治理规则**：
+- `current_stage` 是事实摘要，不是自动生成台词的标签；正文权限以 `allowed_familiarity`、`private_knowledge_shared` 与 `address_touch_boundary` 为准。
+- 共享一次危机、一次谈心或强烈吸引可以造成大幅跃迁，但须记录双方当场选择、催化事件与后效；禁止用旁白直接补出“像认识多年”。
+- 关系每次变化更新本行并保留事件依据；若需完整历史，可在 notes 或独立追加式关系事件表记录，不抹掉旧证据。
+- 关系亲密不自动授予信息权限；秘密披露还须同步写入「章节感知事实表」。
+
 ## 已知事实 Known Truths（章节感知事实）
 
-> 以本表为"某角色在第 N 章时知道什么、不知道什么"的硬边界。
-> 续写时：角色不可引用 **起始章 > 当前章** 的事实；角色忘记已习得的事实需做显式说明。
+> 以本表为"某角色在第 N 章时知道什么、不知道什么，以及如何知道"的硬边界。
+> 续写时：角色不可引用 `known_from_chapter > 当前章` 的事实；同场出现不等于共享全部信息；角色忘记已习得的事实需有失忆、欺骗、误解等显式说明。
 
-| fact_id | statement | subject | truth_status | introduced_chapter | invalidated_chapter | source_chapter | knower | known_from_chapter | confidence | notes |
-| --- | --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- | --- |
-| fact-001 | 主角出身 | 主角 | 当前为真 | 1 | — | 1 | 主角 | 1 | 确证 | 序章交代 |
+| fact_id | statement | subject | truth_status | introduced_chapter | invalidated_chapter | source_chapter | knower | known_from_chapter | confidence | evidence | acquisition_mode | acquisition_event_id | acquisition_evidence | notes |
+| --- | --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- | --- | --- | --- | --- | --- |
+| fact-001 | 主角出身 | 主角 | 当前为真 | 1 | — | 1 | 主角 | 1 | 确证 | “我从河西来” | self_knowledge | evt-001 | “我从河西来” | 第一人称自述 |
 
 ## 资源 / 伤势 / 库存 Resources / Injuries / Inventory
 
@@ -304,18 +342,19 @@
 ## 当前冲突 Current Conflict
 ```
 
-列含义（事实表）：**fact_id**（稳定唯一 ID）；**statement**（一句可验证的陈述）；**subject**（事实主体）；**truth_status**（当前为真 / 已推翻-参见第 N 章 / 仅主角知情 / 多角色共有）；**introduced_chapter**（该事实首次出现的章节）；**invalidated_chapter**（该事实被推翻的章节）；**source_chapter**（信息最初出现的章节）；**knower**（认知主体，一个角色一条认知记录）；**known_from_chapter**（该角色首次获知此事实的章节）；**confidence**（确证 / 推测 / unknown——缺少证据时写 unknown，不得自动补成 canon）；**notes**（备注）。该表是审计维 9（信息越界）与维 29（未来信息泄露）的判定基础。
+列含义（事实表）：**fact_id**（稳定唯一 ID）；**statement**（一句可验证的陈述）；**subject**（事实主体）；**truth_status**（当前为真 / 已推翻-参见第 N 章 / 仅主角知情 / 多角色共有）；**introduced_chapter**（该事实首次进入文本的章节）；**invalidated_chapter**（该事实被推翻的章节）；**source_chapter**（证明事实成立的来源章）；**knower**（认知主体，一个角色一条认知记录）；**known_from_chapter**（该角色首次获知此事实的章节）；**confidence**（确证 / 推测 / unknown）；**evidence**（证明事实成立的来源章原文短引）；**acquisition_mode**（亲历 / 被告知 / 阅读 / 查证 / 推断 / 能力传输 / self_knowledge 等）；**acquisition_event_id**（对应事件时间轴）；**acquisition_evidence**（证明该 knower 获知的 `known_from_chapter` 原文短引）；**notes**（备注）。缺少获知证据时写 unknown，不得自动补成 canon。该表是审计维 9 与维 29 的判定基础。
 
 ## chapter_summaries.md
 
 ```markdown
 # Chapter Summaries
 
-| chapter | title | characters | events | state_changes | hook_activity | mood | chapter_type |
-| ---: | --- | --- | --- | --- | --- | --- | --- |
+| chapter | title | characters | events | state_changes | hook_activity | mood | chapter_type | story_time | elapsed | dramatic_change | knowledge_delta | relationship_delta | novelty_fingerprint |
+| ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 ```
 
 > **events 只允许记录本章正文实际发生的事件**——"计划在下一章才出现"的内容禁止提前写入本行或事实表（如"发现伤痕"若发生在第 N 章，不得写进第 N-1 章摘要）。事实表 evidence 机制从机器侧兜底同类问题（引文必须在来源章命中）。
+> `novelty_fingerprint` 用紧凑格式记录 `POV / 戏剧问题 / 目标 / 阻碍 / 行动链 / 新信息 / 关系变化 / 结果或代价 / 开收尾功能`，供维 42 对照近 5–10 章。不要只写“推进剧情”。
 
 ## chapters/index.json
 
@@ -391,7 +430,7 @@
 - **章首三行入戏**：前三行落在正在发生的事上。禁手：「经过昨夜的事……」「回想起……」「此刻的他，心情复杂」等回顾式承接；回顾前情 ≤2 句且必须夹带新信息
 - **章末断章**：切在能量上升沿（危机切断 / 反转末句 / 半信息揭示 / 决定未执行 / 新变量闯入 / 静默余韵）。禁手：总结本章（「但这个发现足以让他睡一个好觉」）、金句升华（「命运的齿轮开始转动」）、宣布计划（「他要做的，就是……」）、情绪命名（「心中涌起一股暖流」）
 - **元数据不入正文**：钩子推进、审计结论只进 `chapter_summaries.md` / `pending_hooks.md`，不写成正文末尾的斜体附注
-- **类型轮换**：开头类型与收尾类型均不得与近 3 章相同（类型清单见 chapter-craft.md）
+- **功能变奏**：允许复用开头 / 收尾类型，但不得连续复用同一人物动作、信息功能、情绪效果与结果；类型清单见 chapter-craft.md
 
 ## 句式节奏
 - 长短段交替：描写段可长（80-150 字），动作/对话段宜短（20-60 字）
@@ -468,31 +507,111 @@
 | 5 | 挫败 | 首次失败 |
 ```
 
-## 项目敏感内容/措辞约束
+## chapter-NNNN.intent.json
 
-> 敏感内容/措辞约束**来源于用户或项目文件**，禁止模型自行发明敏感词表。文件缺失时输出 unknown/not_configured。
+> 4.0 权威章节契约。字段由 `schemas/chapter-intent.schema.json` 定义；示例中的证据必须在草稿完成后替换为真实段落、短引和当前草稿 SHA-256。不要用占位内容运行门禁。
 
-```markdown
-# 敏感内容 / 措辞约束
-
-## 来源
-- 用户明确要求：
-- 平台安全规则：
-- 项目自身约束：
-
-## 红线清单
-- 
-
-## 措辞约束
-- 
+```json
+{
+  "schemaVersion": "4.0",
+  "chapter": 12,
+  "dramaticQuestion": "主角是否在暴露身份前拿到证词",
+  "pov": "第三人称限制视角：主角",
+  "plannedTargetChars": 3300,
+  "timeArchitecture": {
+    "start": "雨夜三更，县衙后门",
+    "end": "约一刻钟后，档案房内",
+    "elapsed": "约一刻钟",
+    "cutReason": "证词到手但身份暴露，新的行动压力形成"
+  },
+  "knowledgeDeltas": ["主角通过亲读证词获知押运日期"],
+  "relationshipDeltas": ["主角与守门人由试探转为短暂交易"],
+  "knowledgePermissions": [
+    {
+      "character": "主角",
+      "knownAtStart": ["证词藏在档案房"],
+      "acquiredThisChapter": [
+        {
+          "fact": "押运日期是初七",
+          "acquisitionMode": "亲读证词",
+          "eventId": "evt-012-03",
+          "evidencePlan": "主角展开证词并逐字确认日期"
+        }
+      ],
+      "stillUnknown": ["押运路线已被临时更改"]
+    }
+  ],
+  "relationshipPermissions": [
+    {
+      "pairId": "主角|守门人",
+      "stageAtStart": "互相试探的初识",
+      "allowedFamiliarity": ["公事称呼", "条件交易", "不触碰", "不托付私密往事"],
+      "plannedChange": "形成一次性互利关系",
+      "catalystEventId": "evt-012-02",
+      "aftermath": "双方都掌握对方的一项把柄，仍不建立旧识式默契"
+    }
+  ],
+  "noveltyDelta": "不是再次潜入取物，而是以身份代价换取可验证证词",
+  "sceneBeats": [
+    {
+      "beatId": "beat-01",
+      "mode": "scene",
+      "dramaticFunction": "迫使主角在证词与隐匿身份之间选择",
+      "goalOrPressure": "在巡夜换岗前进入档案房",
+      "conflictOrTurn": "守门人认出主角旧伤特征",
+      "requiredResult": "主角以暴露部分身份为代价进入",
+      "timeSpaceAnchor": "雨夜三更，县衙后门至门内",
+      "descriptionObligation": "用遮雨位置、视线与递证动作表现空间压力和交易边界"
+    }
+  ],
+  "evidence": [
+    {
+      "beatId": "beat-01",
+      "paragraphStart": 4,
+      "paragraphEnd": 9,
+      "quote": "他把染血的袖口翻给守门人看",
+      "draftSha256": "sha256:<当前草稿真实哈希>",
+      "status": "pass"
+    }
+  ]
+}
 ```
 
-## chapter-NNNN.intent.md
+生成只读视图：
+
+```bash
+python scripts/render_intent.py story/runtime/chapter-0012.intent.json story/runtime/chapter-0012.intent.md
+```
+
+事务状态不写在 intent；使用 `scripts/chapter_txn.py` 管理 `chapter-NNNN.transaction.json`。正文、知情审计和冷读报告仍用 Markdown。
+
+## chapter-NNNN.intent.md（3.x legacy）
+
+> 以下仅用于读取 / 迁移 3.x 项目。4.0 新章不得照此手写；同名 `.md` 应由 JSON 单向生成。
 
 > **每章都创建**，不仅在方向改变时创建。
 
 ```markdown
 # Chapter NNNN Intent（第 NNNN 章意图）
+
+## Chapter Transaction（章节事务，必填）
+- transaction_state: prepared
+- min_chars: <默认取 book.json.chapterMinChars>
+- target_chars: <默认取 book.json.chapterTargetChars>
+- max_chars: <默认取 book.json.chapterMaxChars>
+- previous_chapter_state: <第一章写 none；否则必须 closed>
+
+> 状态只能按 `prepared → drafted → gated → audited → closed` 前进。`closed` 前不得创建下一章 intent / draft；重开修改时退回 `drafted` 并重跑全部受影响门禁。
+
+## Work Packet Manifest（本章工作包来源，必填）
+- built_from_files:
+- chapter_text_range:
+- relevant_state_rows:
+- relevant_role_files:
+- relevant_hooks:
+- unresolved_drift:
+
+> 每章从文件重新生成，不依赖聊天记忆；这是主代理写作包，禁止传给冷读子代理。
 
 ## Goal（目标）
 
@@ -513,6 +632,33 @@
 
 ## Style Emphasis（风格强调）
 
+## Dramatic Unit（本章戏剧单元，必填）
+- 核心戏剧问题：
+- 开场状态：
+- 章尾不可逆改变：
+- 章节在此处开始 / 结束的理由：
+
+## Time Architecture（时间架构，必填）
+- 章首故事时钟：
+- 章末故事时钟：
+- 叙事覆盖耗时：
+- 场景清单（每场标 scene / summary / ellipsis）：
+- 明确跳过的无效时段：
+- 跳时后的时间 / 地点 / 状态锚点：
+
+## Knowledge Permissions（信息权限预检，必填）
+| 角色 | 章首可知事实 | 本章新获知 | acquisition_mode | acquisition_event_id | 正文证据计划 | 仍不可知 |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## Relationship Permissions（关系权限预检，必填）
+| 关系对 | 章首阶段 / 边界 | 本章允许的称呼·接触·披露 | 计划变化 | 催化事件 | 双方后效 |
+| --- | --- | --- | --- | --- | --- |
+
+## Novelty Delta（跨章新意，必填）
+- 近 5–10 章最相似的既有情节：
+- 本章不可替代的新信息 / 新代价 / 新选择 / 新关系变化：
+- 若使用刻意复现，本次改变其意义的方式：
+
 ## 前章末状态续接 Scene Carry-Over（必填）
 > 上章末各在场角色的物理位置 / 姿态 / 着装 / 时间点，从上一章结尾与 chapter_summaries 提取。本章开场必须与之一致或有显式的时间 / 场景跳转标记；人物位置不得无交代地互换。
 
@@ -521,11 +667,25 @@
 - 角色 B：位置 / 姿态 / 着装
 
 ## 章首 / 章末 Opening / Closing（对照 chapter-craft.md 类型库）
-- 开头类型（不得与近 3 章相同）：
-- 收尾断章类型（不得与近 3 章相同）：
+- 开头类型与戏剧功能（可复用类型，不可复用同一功能与动作链）：
+- 收尾断章类型与产生的新问题 / 后效：
 
 ## Required End-of-Chapter Change（章尾必须出现的改变）
 > 写"画面上出现什么"，不写"总结出什么"（如"他攥着碎玉走出殿门，雪落满肩"，而非"他下定了决心"）。
+
+## Required Scene Beats（必要场景节点，必填）
+| beat_id | mode | dramatic_function | goal_or_pressure | conflict_or_turn | required_result | time_space_anchor | description_obligation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| beat-01 | scene | <本场为何必须存在> | <人物要什么或承受什么> | <阻力、选择或转折> | <正文必须产生的结果> | <时间 / 地点 / 初始位置> | <动作可读性、情绪外化、氛围压力、关系或信息呈现；纯转场可写“无（转场）”> |
+
+> 只列真正必要的节点。禁止用固定感官数量或景物段配额制造模板化描写；`description_obligation` 必须说明描写承担的叙事职责。
+
+## Draft Evidence Map（草稿证据映射，起草后必填）
+| beat_id | paragraph_refs | evidence_quote | status |
+| --- | --- | --- | --- |
+| beat-01 | P3-P8 | <草稿中可精确命中的短引> | pass |
+
+> 每个 Required Scene Beat 必须恰好有一行；短引须在草稿正文命中，段落引用不能为空。字数达标但节点没有证据仍为 fail。
 
 ## Evidence Read（读过的证据）
 

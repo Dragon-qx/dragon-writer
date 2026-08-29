@@ -42,6 +42,7 @@ books/<book-id>/
       minor/<name>.md
     runtime/
       chapter-0001.intent.md
+      chapter-0001.draft.md
     snapshots/
       0000/
       0001/
@@ -123,8 +124,20 @@ books/<book-id>/
 `audit-drift.md`
 : 审计漂移账本——Auditor 逐维审计的处置记录。分两节：**已修复**（章 + 维度 + 问题 + 修复动作）与**已知漂移**（章 + 维度 + 问题 + 原因 + 计划）。仪表盘的"审计漂移"小节直接渲染本文件。模式 B 每章、模式 E 改写后必更新。
 
+`runtime/chapter-NNNN.intent.json`
+: 当前章机器判定契约的唯一事实源，受 `schemas/chapter-intent.schema.json` 约束：戏剧问题、POV、时间架构、必要场景节点，以及绑定草稿哈希、段落范围和短引的 Evidence Map。每章都创建；不能降低 `book.json` 的书级字符下限。
+
 `runtime/chapter-NNNN.intent.md`
-: 给下一章的人类可读契约：goal、outline node、前章末状态续接、must keep、must avoid、style emphasis、hook agenda、recent evidence。**每章都创建**，不仅在方向改变时创建。尾部含**实际偏离 Deviation Log**：落盘时若产出与 intent 的 goal / 必须场景 / 章末画面不一致，**只追加**偏离记录（偏离项 + 原因 + 去向章），不改写 intent 原有内容——intent 是写前契约，偏离只能留痕。
+: 由 `scripts/render_intent.py` 从同名 JSON 单向生成的只读视图，头部保存源文件哈希。禁止手改；`validate_book.py` 会拒绝缺失或过期视图。3.x 项目的手写 intent 只作为迁移输入，保留为 legacy 证据而非 4.0 权威源。
+
+`runtime/chapter-NNNN.transaction.json`
+: `scripts/chapter_txn.py` 独占维护的哈希事件链。状态只能按允许边推进；草稿、门禁报告、审计清单与正式稿哈希绑定。不得手工改状态。
+
+`runtime/chapter-NNNN.audit.json`
+: 两类审计报告的路径、SHA-256 与 pass/fail 清单；报告本身仍是 Markdown。事务只有在 informed / cold 两类均通过时进入 `audited`。
+
+`runtime/chapter-NNNN.draft.md`
+: 主代理独立生成的非权威草稿。机械门禁、知情审计和纯正文冷读都在此稿上完成；通过后才复制到 `chapters/`。子代理不得创建或修改该文件，快照和仪表盘不把它当 canon。
 
 `snapshots/<NNNN>/`
 : 每章落盘后的状态快照。详见 [快照契约](#快照契约)。
@@ -168,13 +181,15 @@ books/<book-id>/
 
 每章落盘必须遵循**事务式流程**，避免"章节正文成功但 state/hooks/index 只更新一部分"：
 
-1. **生成草稿**：在 `runtime/` 生成章节意图（`chapter-NNNN.intent.md`，含「前章末状态续接」）和草稿。
-2. **双层质检**：驻场初筛（10 点）→ 深化审计（43 维 · 审-改循环）。审计、修订和账本校验完成前不写入正式章节目录。
-3. **创建快照**：写正式文件前创建旧状态快照（`snapshots/<NNNN-1>/`）。
-4. **按序写入**：按确定顺序写正文 → index → 摘要 → 状态 → 钩子 → `book.json`（status / updatedAt）→ intent「实际偏离」记录。**wordCount 禁手写**，必须由 `python scripts/rebuild_index.py <book-dir>` 生成。
-5. **一致性验证**：全部写入后运行 `python scripts/validate_book.py <book-dir>`（事实表证据、道具账本、空间锚点、钩子依赖、别名/双卡/字数核对）。FAIL 则修复后再落盘。
-6. **章末快照**：完成后创建章末快照（`snapshots/<NNNN>/`）。
-7. **失败处理**：任一步失败时保留草稿，并报告失败文件与恢复方式。
+1. **前置锁**：运行 `check_chapter_draft.py --preflight` 与 `chapter_txn.py ... prepare`；上一章结构化事务必须为 `closed` / `legacy_closed`。
+2. **主代理起草**：只由主代理写 `runtime/chapter-NNNN.draft.md`，运行 `chapter_txn.py ... mark-drafted` 锁定哈希；禁止任何子代理写作或并行处理后章。
+3. **机械门禁**：在权威 intent JSON 填写与当前草稿哈希绑定的 Evidence Map，重新生成只读 Markdown，再运行 `chapter_txn.py ... gate`。
+4. **知情与冷读门禁**：主代理核对隐藏连续性事实；之后最多一个空上下文子代理只读显式稿源构建的正文包。两份 Markdown 报告通过 `record-audit` 登记路径与哈希；任何正文修改都须 `reopen` 并重跑。
+5. **创建恢复点**：写正式文件前创建旧状态快照（`snapshots/<NNNN-1>/`）。
+6. **按序写入**：正文 → index → 摘要 → 状态 → 钩子 → `book.json`（status / updatedAt）→ intent 实际偏离。**wordCount 禁手写**，必须由 `python scripts/rebuild_index.py <book-dir>` 生成。
+7. **一致性验证**：运行近似文本检查与 `python scripts/validate_book.py <book-dir>`。FAIL 则回到草稿修复，不能靠留 warning 封板。
+8. **章末快照与封板**：创建 `snapshots/<NNNN>/`，运行 `chapter_txn.py ... close`；脚本重验全书、正式稿及所有登记哈希，之后才可准备下一章。
+9. **失败处理**：任一步失败时保留草稿，并报告失败文件与恢复方式；禁止补水凑字数或绕过状态锁。
 
 ---
 
@@ -232,6 +247,14 @@ books/<book-id>/
 
 ## Schema 版本
 
+### JSON Schema 的边界与一致性
+
+JSON Schema 是结构化 JSON 的机器可验证字段契约：规定必填字段、类型、枚举、格式、未知字段策略和版本。它只约束需要确定性门禁的少量事实，不约束题材，也不承载正文、自由写作说明或文学判断。
+
+4.0 采用“一个语义一个权威源”：intent / transaction / audit manifest 以 JSON 为权威；同名 Markdown 只能由 renderer 单向生成。schema 文件本身是字段定义，脚本通过共享验证器读取它们，文档只解释用途，不复制另一套可执行规则。每个 JSON 写 `schemaVersion`，每个生成视图写源 SHA-256；CI / `validate_book.py` 同时校验 schema、事件链和视图新鲜度。因此 MD 与 JSON 不做双向同步：若冲突，生成视图被判过期并重建，绝不让人手选择哪份是真的。
+
+旧版手写 Markdown intent 不自动冒充 4.0 JSON。迁移脚本只转换能无损提取且有真实正文证据的字段；缺失内容保留 legacy 文件并报告人工补录，不推断、不倒填历史审计。
+
 ### book.json Schema
 
 ```json
@@ -244,6 +267,10 @@ books/<book-id>/
   "status": "outlining",
   "targetChapters": 200,
   "chapterWordCount": 3000,
+  "chapterMinChars": 3000,
+  "chapterTargetChars": 3300,
+  "chapterMaxChars": 4500,
+  "chapterLengthGateFromChapter": 1,
   "createdAt": "<ISO timestamp>",
   "updatedAt": "<ISO timestamp>",
   "schemaVersion": "1.0.0",
@@ -256,10 +283,14 @@ books/<book-id>/
 | `id` | string | 是 | 书籍唯一标识（slug） |
 | `title` | string | 是 | 书名 |
 | `language` | string | 是 | 语言代码（zh / en） |
-| `genre` | string | 是 | 题材（用于体裁裁剪） |
+| `genre` | string | 是 | 题材 / 混合类型 / 自定义标签（仅用于技法适配，不限制内容范围） |
 | `status` | string | 是 | outlining / drafting / paused / completed |
 | `targetChapters` | integer | 否 | 目标章数 |
-| `chapterWordCount` | integer | 否 | 目标单章字数 |
+| `chapterWordCount` | integer | 否 | 兼容字段 / 仪表盘目标；旧书缺少新字段时同时作为硬下限与目标 |
+| `chapterMinChars` | integer | 否 | 去空白字符硬下限；低于此值验证失败 |
+| `chapterTargetChars` | integer | 否 | 规划目标，不作为补水理由 |
+| `chapterMaxChars` | integer | 否 | 软上限；超过时警告并检查是否拖沓 |
+| `chapterLengthGateFromChapter` | integer | 否 | 长度门禁起始章，默认 1；只用于导入时豁免既有历史稿 |
 | `createdAt` | string | 是 | 创建时间 |
 | `updatedAt` | string | 是 | 最后更新时间 |
 | `schemaVersion` | string | 是 | 书籍 schema 版本 |
@@ -324,29 +355,46 @@ books/<book-id>/
 
 ### 章节感知事实表
 
-> 以本表为"某角色在第 N 章时知道什么、不知道什么"的硬边界。
+> 以本表为"某角色在第 N 章时知道什么、不知道什么，以及如何知道"的硬边界。作者 / 读者 / 叙事者知道不等于角色知道；同场出现不等于共享信息。
 
-| fact_id | statement（事实陈述） | subject（主体） | truth_status（真伪） | introduced_chapter（引入章） | invalidated_chapter（推翻章） | source_chapter（来源章） | knower（认知角色） | known_from_chapter（认知起始章） | confidence（证据强度） | notes（备注） |
-| --- | --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- | --- |
-| fact-001 | 主角出身 | 主角 | 当前为真 | 1 | — | 1 | 主角 | 1 | 确证 | 序章交代 |
+| fact_id | statement | subject | truth_status | introduced_chapter | invalidated_chapter | source_chapter | knower | known_from_chapter | confidence | evidence | acquisition_mode | acquisition_event_id | acquisition_evidence | notes |
+| --- | --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- | --- | --- | --- | --- | --- |
+| fact-001 | 主角出身 | 主角 | 当前为真 | 1 | — | 1 | 主角 | 1 | 确证 | “我从河西来” | self_knowledge | evt-001 | “我从河西来” | 序章交代 |
 
 **列含义**：
 - **fact_id**：每个事实的稳定唯一 ID，不因行号变化而改变。
 - **statement**：一句可验证的陈述。
 - **subject**：事实主体。
 - **truth_status**：当前为真 / 已推翻-参见第 N 章 / 仅主角知情 / 多角色共有。
-- **introduced_chapter**：该事实首次出现的章节。
+- **introduced_chapter**：该事实首次进入文本的章节。
 - **invalidated_chapter**：该事实被推翻的章节（未推翻填 `—`）。
 - **source_chapter**：信息最初出现的章节。
 - **knower**：认知主体（一个角色一条认知记录，避免多人混写在同一单元格）。
 - **known_from_chapter**：该角色首次获知此事实的章节（= validFrom）。
 - **confidence**：确证 / 推测 / unknown——缺少证据时写 `unknown`，不得自动补成 canon。
+- **evidence**：证明事实本身成立的 `source_chapter` 原文短引。
+- **acquisition_mode**：亲历 / 被告知 / 阅读 / 查证 / 推断 / 能力传输 / self_knowledge 等获知路径。
+- **acquisition_event_id**：对应「事件时间轴」的事件 ID。
+- **acquisition_evidence**：证明该 knower 在 `known_from_chapter` 获知的正文短引。与 evidence 可以相同，也可以来自不同章节。
 - **notes**：备注。
 
 **治理规则**：
 - 被推翻的事实保留历史记录，不删除或覆盖——标 `truth_status` 为"已推翻-参见第 N 章"。
 - 新事实必须记录来源章（`source_chapter`）。
 - 分离事实真伪与角色是否知道——一个角色一条认知记录。
+- 关系亲密、同场出现、读者已经看见都不能替代 acquisition evidence；没有路径时保留 unknown，不得为方便剧情补成已知。
+
+### 事件时间轴
+
+> 追加式故事时钟。每个正文实际事件记录章内顺序、起止时间、耗时、地点、参与者、前置条件、结果与 `scene / summary / ellipsis` 呈现方式。章节号不是时间单位：允许同一分钟跨章，也允许一章跨越多年。
+
+治理规则：事件前置必须已经发生；旅程、训练、伤势恢复与年龄变化须满足 book rules；无戏剧价值的日程应压缩或跳过，中长跳时在落点重新锚定时间、地点和状态。
+
+### 关系许可账本
+
+> 以角色对为单位记录 first_met_chapter、prior_history、current_stage、trust_basis、allowed_familiarity、private_knowledge_shared、address_touch_boundary、最近变化章、催化事件与双方不对称状态。
+
+治理规则：关系标签不是权限；初识角色不得凭空使用旧识口吻、共享回忆、亲密称呼、身体接触、秘密托付或替对方做主。快速关系跃迁可以发生，但必须有正文可见的强催化、双方反应与后效；关系变化不自动同步角色知识，秘密披露仍需写事实表。
 
 ### 道具账本 Prop Ledger
 
@@ -458,12 +506,11 @@ books/<book-id>/
 - `chapter_summaries.md` 模板
 - `chapters/index.json` 模板
 - `audit-drift.md` 模板
-- `chapter-NNNN.intent.md` 模板
+- `chapter-NNNN.intent.json` 权威模板与 3.x Markdown 迁移模板
 - 章节 delta 模板
 - `style_guide.md` 模板
 - `fanfic_canon.md` 模板
 - `parent_canon.md` 模板
 - `emotional_arcs.md` 模板
-- 项目敏感内容/措辞约束模板
 - 快照 manifest 模板
 - rewrite manifest 模板

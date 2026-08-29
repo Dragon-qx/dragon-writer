@@ -166,9 +166,33 @@ def count_words(text: str) -> int:
 
 
 def count_characters(text: str) -> int:
-    """章节"字数"统计（去空白字符数）——与 book.json 的 chapterWordCount 目标同尺度。
+    """章节字符数（去空白）——与 book.json 的章节长度字段同尺度。
 
     chapterWordCount 是作者按"字符"设定的单章目标，而 count_words 统计的是
     非标点连续段数（尺度不同），两者不可直接比较。对目标偏差用本函数。
     """
     return len(re.sub(r"\s", "", text))
+
+
+def chapter_length_limits(book_data: dict) -> Tuple[int, int, int]:
+    """返回 (硬下限, 规划目标, 软上限)，兼容旧版 chapterWordCount。
+
+    新书应显式写 chapterMinChars / chapterTargetChars / chapterMaxChars。
+    旧书缺少新字段时，chapterWordCount 同时作为硬下限和目标；软上限
+    默认为目标的 135%，避免旧项目无上限。无任何有效配置时回退 3000。
+    字段合法性（正整数及顺序）由 validate_book 另行报告。
+    """
+    legacy = book_data.get("chapterWordCount")
+    legacy = legacy if isinstance(legacy, int) and not isinstance(legacy, bool) and legacy > 0 else 3000
+
+    minimum = book_data.get("chapterMinChars", legacy)
+    target = book_data.get("chapterTargetChars", legacy)
+    maximum = book_data.get("chapterMaxChars")
+
+    if not isinstance(minimum, int) or isinstance(minimum, bool) or minimum <= 0:
+        minimum = legacy
+    if not isinstance(target, int) or isinstance(target, bool) or target <= 0:
+        target = legacy
+    if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum <= 0:
+        maximum = max(target, round(target * 1.35))
+    return minimum, target, maximum

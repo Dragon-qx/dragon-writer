@@ -21,7 +21,7 @@ import _contract
 SCHEMA_VERSION = "1.0.0"
 
 # 书籍骨架目录（由仓库维护，直接复制，不让模型从 Markdown 重新拼装）
-BOOK_SKELETON_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "book-skeleton")
+BOOK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "book-template")
 DASHBOARD_TEMPLATE = os.path.join(os.path.dirname(__file__), "..", "assets", "dashboard.html")
 
 
@@ -52,7 +52,9 @@ def write_file(path: str, content: str) -> None:
 
 
 def create_book(title: str, genre: str, root: str, language: str = "zh",
-                target_chapters: int = 200, chapter_word_count: int = 3000) -> str:
+                target_chapters: int = 200, chapter_word_count: int = 3000,
+                chapter_min_chars: int = None, chapter_target_chars: int = None,
+                chapter_max_chars: int = None) -> str:
     """创建新书，返回书目录路径。"""
     slug = slugify(title)
     book_dir = os.path.join(root, slug)
@@ -83,6 +85,16 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
             "请确认 skill 目录存在 _meta.json。",
             file=sys.stderr,
         )
+    minimum = chapter_min_chars or chapter_word_count
+    target = chapter_target_chars or chapter_word_count
+    maximum = chapter_max_chars or max(target, round(target * 1.35))
+    if not 0 < minimum <= target <= maximum:
+        print(
+            f"错误：章节长度必须满足 0 < min({minimum}) <= target({target}) <= max({maximum})。",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     book_json = {
         "id": slug,
         "title": title,
@@ -91,6 +103,10 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
         "status": "outlining",
         "targetChapters": target_chapters,
         "chapterWordCount": chapter_word_count,
+        "chapterMinChars": minimum,
+        "chapterTargetChars": target,
+        "chapterMaxChars": maximum,
+        "chapterLengthGateFromChapter": 1,
         "createdAt": ts,
         "updatedAt": ts,
         "schemaVersion": SCHEMA_VERSION,
@@ -98,14 +114,14 @@ def create_book(title: str, genre: str, root: str, language: str = "zh",
     }
     write_json(os.path.join(book_dir, "book.json"), book_json)
 
-    # 复制书籍骨架（如果存在）
+    # 只复制空白结构模板；示例小说绝不能进入新项目。
     # 注意：跳过 book.json——本函数已在上面写入正确的 book.json
     # （含真实 id / slug / 版本 / 时间戳），不能被骨架占位版覆盖。
-    if os.path.isdir(BOOK_SKELETON_DIR):
-        for name in os.listdir(BOOK_SKELETON_DIR):
+    if os.path.isdir(BOOK_TEMPLATE_DIR):
+        for name in os.listdir(BOOK_TEMPLATE_DIR):
             if name == "book.json":
                 continue
-            src = os.path.join(BOOK_SKELETON_DIR, name)
+            src = os.path.join(BOOK_TEMPLATE_DIR, name)
             dst = os.path.join(book_dir, name)
             if os.path.isdir(src):
                 shutil.copytree(src, dst, dirs_exist_ok=True)
@@ -143,6 +159,9 @@ def main():
     parser.add_argument("--language", default="zh", help="语言代码")
     parser.add_argument("--target-chapters", type=int, default=200, help="目标章数")
     parser.add_argument("--chapter-word-count", type=int, default=3000, help="目标单章字数")
+    parser.add_argument("--chapter-min-chars", type=int, help="单章去空白字符硬下限（默认等于目标）")
+    parser.add_argument("--chapter-target-chars", type=int, help="单章规划字符数（默认等于目标）")
+    parser.add_argument("--chapter-max-chars", type=int, help="单章去空白字符软上限（默认目标的 135%%）")
     parser.add_argument("--root", default="books", help="书籍根目录")
     args = parser.parse_args()
 
@@ -153,6 +172,9 @@ def main():
         language=args.language,
         target_chapters=args.target_chapters,
         chapter_word_count=args.chapter_word_count,
+        chapter_min_chars=args.chapter_min_chars,
+        chapter_target_chars=args.chapter_target_chars,
+        chapter_max_chars=args.chapter_max_chars,
     )
 
 

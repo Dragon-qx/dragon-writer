@@ -2,6 +2,8 @@
 
 一套**工具无关**（tool-neutral）的**长篇虚构小说写作工作流**，兼容各类 AI 编码 agent 使用。
 
+**不限制题材、受众、内容范围或表达尺度。** `genre` 只选择更合适的叙事技法与审计视角，不是题材白名单 / 黑名单。
+
 Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续写**的"文件圣经"，外加一份给作者自己看的**实时进度仪表盘**。**全程不靠记忆，靠文件**。
 
 ### ⑤ 写作仪表盘导览
@@ -25,19 +27,19 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 | 模式 | 触发时机 | 做什么 |
 | --- | --- | --- |
 | **A · 新书** | 一句灵感 / 书名 / 题材 | 建目录、一口气产出全部基础文件骨架（意图 / 故事框架 / 卷纲 / 角色 / 规则 / 状态 / 钩子） |
-| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（10 项驻场初筛 + 43 个候选深化审计维度 · 审-改循环） → 落盘 |
+| **B · 续写** | 书已存在，往下写 | 读工作集 → 写章节意图 → 起草 → **双层质量门禁**（12 项驻场初筛 + 43 个候选深化审计维度 · 审-改循环） → 落盘 |
 | **C · 导入** | 手里有旧章节，缺状态文件 | 从旧章反推基础文件，回放导入章节，续写 |
 | **D · 转向** | "换方向 / 下一章写 X" | 轻量调 `current_focus.md`，不改整份大纲 |
 | **E · 改写 / 修复** | 重写某一章 | **三步回滚机械**：恢复快照 → 清后续产物 → 重写 → 再走双层质检 |
 | **F · 仪表盘** | 看进度 / 关系 / 读章节 | 确保书文件夹下有模板，**双击 HTML 打开**，权限仍有效时自动重连（不承诺永久零交互） |
-| **G · 合并审核** | 写完一章 / 连续写完多章后 | 把选定章节合并，子代理统一跑 43 维（时间线 / 设定冲突 / 伏笔 / 去 AI 味…），留痕审计漂移 |
+| **G · 合并审核** | 写完一章 / 连续写完多章后 | 一个空上下文冷读子代理只审选定正文的读者体感；主代理另行核对隐藏连续性事实并留痕 |
 
 ### 双层质量门禁
 
 写一章不是写完就定稿，而是过两层：
 
-1. **驻场初筛（10 点）**——主角是否按动机行动、有没有人知道不该知道的、**空间是否一致、口袋里东西有没有无痕 ±1、常识是否合理、本章开场与上章末物理状态是否衔接**……直接、快速。
-2. **43 个候选深化审计维度连续审计 + 审-改循环**——按体裁裁剪出本章节要跑的维度清单（仙侠默认 22–26 维），逐维出报告 → 修订 → **回头从第 1 维再过一遍**（防修 A 打坏 B） → 留痕审计漂移。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
+1. **驻场初筛（12 点）**——主角是否按动机行动、角色信息是否有获知路径、初识关系是否越级熟悉、章节是否机械覆盖一天、是否与近章语义重演，以及空间 / 道具 / 常识 / 章间物理状态是否连续。
+2. **43 个候选深化审计维度连续审计 + 审-改循环**——按章节风险和叙事需要适配维度清单；题材只影响技法选择，不限制创作范围。逐维出报告 → 修订 → **回头从第 1 维再过一遍**（防修 A 打坏 B） → 留痕审计漂移。详见 [`references/audit-dimensions.md`](references/audit-dimensions.md)。
 
 ### 写作仪表盘（双击即用）
 
@@ -54,7 +56,7 @@ Dragon Writer 把一部长篇拆成一份**可审计、可回滚、跨会话续�
 ### 受保护上下文 vs 可压缩历史
 
 - **静态基础**（premise / 世界法则 / 角色卡 / 规则书）→ 尽量不动。
-- **运行时态**（当前状态 / 钩子 / 摘要 / 焦点 / **道具账本 / 空间锚点** / 审计漂移）→ 每章更新。
+- **运行时态**（当前状态 / 钩子 / 摘要 / 焦点 / **事件时间轴 / 信息获知链 / 关系许可 / 道具账本 / 空间锚点** / 审计漂移）→ 每章更新。
 - **权威顺序**（冲突裁决） ：用户指令 ＞ 当前焦点 ＞ 意图 ＋ 规则 ＞ 状态 / 角色 / 钩子 ＞ 大纲 ＞ 旧摘要 ＞ 旧章节正文。
 
 ---
@@ -72,7 +74,8 @@ dragon-writer/
     file-contract.md               # 规范布局 + 文件职责 + 权威顺序 + 事务流程 + 快照契约 + Schema
     file-contract.json             # 机器可读文件契约（canonical + aliases + required + consumer）
     templates.md                   # 全部基础文件模板（含新增模板）
-    audit-dimensions.md            # 43 维：判定规则 + 分级 + 体裁裁剪 + 四态结果 + 风险驱动 + 维度边界
+    chapter-craft.md               # 戏剧单元、叙事时间压缩、信息 / 关系权限与断章技法
+    audit-dimensions.md            # 43 维：判定规则 + 分级 + 技法适配 + 四态结果 + 风险驱动 + 维度边界
     workflow.md                    # 路由到各模式文件
     workflow-new-book.md           # 模式 A：创建新书
     workflow-continue.md           # 模式 B：续写
@@ -83,11 +86,24 @@ dragon-writer/
     workflow-combined-audit.md     # 模式 G：合并审核
   assets/
     dashboard.html                 # 运行时仪表盘模板（零嵌入数据，构建产物）
-    book-skeleton/                 # 书籍骨架（init_book 直接复制）
+    book-template/                 # 新书空白模板（init_book 只复制这一份）
+    book-skeleton/                 # 带内容的回归示例，不得用于初始化
+  schemas/
+    chapter-intent.schema.json     # 章节意图机器契约
+    chapter-transaction.schema.json # 哈希事务状态
+    chapter-audit.schema.json      # 审计报告绑定清单
+    import-manifest.schema.json    # 导入历史豁免清单
   scripts/
     _contract.py                   # 共享契约加载器（canonical/aliases/字数/哈希）
-    init_book.py                   # 创建新书（含完整示例骨架复制）
+    _schema.py                     # 零依赖 JSON Schema 子集验证器
+    init_book.py                   # 从空白模板创建新书
+    chapter_txn.py                 # 哈希绑定章节状态机
+    render_intent.py               # 从权威 JSON 生成只读 Markdown
+    migrate_3_13_to_4_0.py        # 保守迁移，不伪造历史审计
     validate_book.py               # 验证书籍完整性（账本一致性机器检查）
+    check_chapter_draft.py          # 章节串行锁、硬字符下限与场景证据门禁
+    build_cold_read_packet.py       # 只从正文构造无背景冷读包
+    check_chapter_overlap.py       # 当前章与近章的整章 / 段落近似文本检查
     rebuild_index.py               # 重建章节 index（真实字数）
     snapshot_book.py               # 创建 / 验证快照
     rollback_book.py               # 安全回滚
@@ -98,6 +114,7 @@ dragon-writer/
   tests/
     test_contract.py               # Python 文件契约测试
     test_validate_checks.py        # 账本一致性检查测试（别名/双卡/字数/证据/锚点/性别/维度列）
+    test_chapter_transaction.py    # 单写手事务、硬门禁和冷读包隔离测试
     test_auto_update.py            # 自动更新测试（版本比较/下载 URL/git 保护/CLI 参数）
     fixtures/
       standard-book/               # 标准书 fixture（通过全部验证）
@@ -117,7 +134,7 @@ dragon-writer/
         audit-drift.md / style_guide.md
         outline/{story_frame.md, volume_map.md}
         roles/{major, minor}/<name>.md
-        runtime/{chapter-NNNN.intent.md, *.rewrite.md}
+        runtime/{chapter-NNNN.intent.json, chapter-NNNN.intent.md, chapter-NNNN.transaction.json, chapter-NNNN.draft.md, *.rewrite.md}
         snapshots/{0000..000N}/
 ```
 
@@ -126,6 +143,10 @@ dragon-writer/
 ---
 
 ## 核心机制（续写必跑）
+
+连续写作采用**单写手串行事务**：只有主代理可以规划、起草、改正文与更新状态；上一章未 `closed` 时禁止开始下一章。子代理只在草稿冻结后做一次无背景冷读，且只收到正文，不收到大纲、intent、人物卡、时间线、信息链、关系账本、字数目标或旧报告。
+
+新章用 `scripts/chapter_txn.py` 推进哈希事务；`chapter-NNNN.intent.json` 是机器契约唯一事实源，同名 Markdown 仅为生成视图。`gate` 硬拦字符数不足、占位内容和必要场景节点无当前草稿证据。冷读包必须以 `--final` / `--draft` 显式指定稿源并输出包外 manifest，避免误读旧草稿或泄露作者上下文。
 
 续写每章，`current_state.md` 是"硬账本"，下面两个表是本次优化的重点——**没有它们，口袋里东西数和房间门朝哪边都没有参照**：
 
@@ -155,18 +176,24 @@ dragon-writer/
 | 规范名 / 别名并存 | `audit-drift.md` 与 `audit_drift.md` 双源 | error |
 | 角色同名双卡 | 同一角色同时存在于 `major/` 与 `minor/`（晋升未清理） | error |
 | wordCount 真值 | index 字数与正文重算值偏差 >5%（禁手写，须跑 `rebuild_index.py`） | error |
+| 章节字符硬下限 | 正文去空白字符数低于 `chapterMinChars`（旧书回退 `chapterWordCount`） | error |
+| 章节字符软上限 | 正文超过 `chapterMaxChars`，提示检查拖沓和重复 | warning |
 | 事实表证据链 | fact 的 `evidence` 引文必须在来源章正文命中（防捏造事实） | error |
+| 角色获知链 | 每名 knower 的 acquisition mode / event / evidence 完整，且获知证据在获知章命中 | error |
+| 关系许可链 | 关系阶段、允许的熟悉行为、催化事件与关系变化正文证据完整 | error |
 | 道具 origin 漂移 | origin（来历）跨快照变化而未同步失效旧事实 | warning |
 | canon 数字锚点自冲突 | 角色卡锚点表同事项多值无递增生效章 | warning |
 | 性别称谓 lint | 女角色被"男的"、男角色被"女的"错称 | warning |
 | 维度列一致性 | 角色卡时间线出现 book_rules 未声明的列（如仙侠题材的三围） | warning |
 | book.json 生命周期 | status 陈旧 / updatedAt 落后 / skillVersion 不符 | warning |
 
-配套的新 schema 字段：事实表 `evidence`（原文短引）、道具账本 `origin`（来历）、角色卡 `基本信息·性别` + `canon 数字锚点`、`book_rules`「物理数据维度」「逻辑数据维度」声明（时间线列按题材声明，未声明的列不出现）。
+配套 schema：事件时间轴；事实表 `evidence + acquisition_mode + acquisition_event_id + acquisition_evidence`；关系许可账本；摘要 `story_time + elapsed + dramatic_change + novelty_fingerprint`；道具账本 `origin`；角色卡 `社交边界指纹 + canon 数字锚点`。
+
+跨章去重另运行 `python scripts/check_chapter_overlap.py <book-dir> --chapter <N>`：机器先抓整章 / 段落近似文本，维 42 再结合近 5–10 章 `novelty_fingerprint` 判断语义重演。
 
 ### 完整示例书骨架（book-skeleton）
 
-`assets/book-skeleton/` 是一本**内部自洽的完整示例书**（《霜寒之纪》/陆恒），19 个文件全部有可抄的完整示例、**零空目录**：两个示例章节、三张角色卡（含性别 + 数字锚点 + 时间线）、事实表带证据、道具账本带来历、空间锚点带登记、intent 带"前章末状态续接 + 实际偏离记录"。`init_book.py` 建新书时直接复制，模型照此改写，不再凭空猜结构。
+`assets/book-skeleton/` 是一本**内部自洽的完整回归示例书**（《霜寒之纪》/陆恒）：用于学习账本写法和测试旧项目兼容，绝不进入新项目。`init_book.py` 只复制 `assets/book-template/` 的空白结构，从源头避免示例角色、关系和剧情污染新书。
 
 ---
 
@@ -209,7 +236,7 @@ xdg-open books/<book-id>/dashboard.html    # Linux
 | 每种模式的具体步骤 | [references/workflow.md](references/workflow.md) |
 | 规范布局 + 文件职责 + 权威顺序 | [references/file-contract.md](references/file-contract.md) |
 | 基础文件模板（新建 / 回填时照抄） | [references/templates.md](references/templates.md) |
-| **43 个候选深化审计维度**的规则、分级、体裁裁剪 | [references/audit-dimensions.md](references/audit-dimensions.md) |
+| **43 个候选深化审计维度**的规则、分级、技法适配 | [references/audit-dimensions.md](references/audit-dimensions.md) |
 | 合并审核（模式 G）流程 | [references/workflow-combined-audit.md](references/workflow-combined-audit.md) |
 | 仪表盘模板 | [assets/dashboard.html](assets/dashboard.html) |
 | 仪表盘总览标签截图 | [references/tab-overview.png](references/tab-overview.png) |

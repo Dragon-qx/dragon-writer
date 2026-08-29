@@ -1,6 +1,6 @@
 {
   "$schema": "https://dragon-writer.github.io/schemas/file-contract.json",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Dragon Writer 文件契约的机器可读版本。文档、脚本、仪表盘共用这一份，避免多处重复维护。",
 
   "files": {
@@ -51,7 +51,7 @@
       "required": false,
       "layer": "runtime",
       "consumer": ["dashboard"],
-      "description": "当前状态"
+      "description": "当前状态：故事时钟、逐角色信息获知链、关系许可、资源、道具与空间锚点"
     },
     "story/pending_hooks.md": {
       "path": "story/pending_hooks.md",
@@ -65,7 +65,7 @@
       "required": false,
       "layer": "runtime",
       "consumer": ["dashboard"],
-      "description": "章节摘要"
+      "description": "章节摘要：事件、变化、story_time、elapsed 与 novelty_fingerprint"
     },
     "story/style_guide.md": {
       "path": "story/style_guide.md",
@@ -80,6 +80,41 @@
       "layer": "runtime",
       "consumer": ["dashboard"],
       "description": "审计漂移"
+    },
+    "story/runtime/chapter-{nnnn}.intent.json": {
+      "path": "story/runtime/chapter-{nnnn}.intent.json",
+      "required": false,
+      "layer": "runtime",
+      "consumer": ["scripts"],
+      "description": "4.0 权威章节意图：时间架构、必要场景节点、知识/关系变化与正文证据"
+    },
+    "story/runtime/chapter-{nnnn}.intent.md": {
+      "path": "story/runtime/chapter-{nnnn}.intent.md",
+      "required": false,
+      "layer": "generated",
+      "consumer": ["humans"],
+      "description": "由 intent.json 单向生成的只读人类视图；3.x 项目兼容为旧权威 intent"
+    },
+    "story/runtime/chapter-{nnnn}.transaction.json": {
+      "path": "story/runtime/chapter-{nnnn}.transaction.json",
+      "required": false,
+      "layer": "runtime",
+      "consumer": ["scripts"],
+      "description": "哈希绑定的章节状态机与事件链"
+    },
+    "story/runtime/chapter-{nnnn}.audit.json": {
+      "path": "story/runtime/chapter-{nnnn}.audit.json",
+      "required": false,
+      "layer": "runtime",
+      "consumer": ["scripts"],
+      "description": "知情审计与无背景冷读报告的路径、哈希和状态"
+    },
+    "story/runtime/chapter-{nnnn}.draft.md": {
+      "path": "story/runtime/chapter-{nnnn}.draft.md",
+      "required": false,
+      "layer": "runtime",
+      "consumer": ["scripts"],
+      "description": "主代理串行生成的非权威章节草稿；子代理不得修改"
     },
     "story/roles/{major|minor}/{name}.md": {
       "path": "story/roles/{major|minor}/{name}.md",
@@ -123,6 +158,9 @@
       "^story/snapshots/",
       "^story/runtime/rewrites/",
       "^story/runtime/rewrite/",
+      "^story/runtime/chapter-\\d+\\.draft\\.md$",
+      "^story/runtime/chapter-\\d+\\.intent\\.legacy\\.md$",
+      "^story/runtime/.*\\.superseded-",
       "^story/rewrite/",
       "^story/rewrites/",
       "^story/backup/",

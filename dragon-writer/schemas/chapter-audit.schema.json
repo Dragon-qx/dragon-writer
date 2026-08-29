@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragon-writer.local/schemas/chapter-audit.schema.json",
+  "title": "Dragon Writer Chapter Audit Manifest",
+  "type": "object",
+  "required": ["schemaVersion", "chapter", "draftSha256", "informedAudit", "coldRead"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": "4.0"},
+    "chapter": {"type": "integer", "minimum": 1},
+    "draftSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "informedAudit": {"$ref": "#/$defs/auditResult"},
+    "coldRead": {"$ref": "#/$defs/auditResult"}
+  },
+  "$defs": {
+    "auditResult": {
+      "type": "object",
+      "required": ["status", "reportPath", "reportSha256"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"enum": ["pass", "fail"]},
+        "reportPath": {"type": "string", "minLength": 1},
+        "reportSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    }
+  }
+}
